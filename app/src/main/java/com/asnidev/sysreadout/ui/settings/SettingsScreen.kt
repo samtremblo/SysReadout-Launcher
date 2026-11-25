@@ -164,6 +164,14 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     Toggle("open keyboard", prefs.autoKeyboard) { v -> vm.update { it.copy(autoKeyboard = v) } }
     Toggle("launch single match", prefs.autoLaunch) { v -> vm.update { it.copy(autoLaunch = v) } }
     ContactSearchToggle(vm)
+    Toggle("app shortcuts in search", prefs.appShortcuts) { v -> vm.update { it.copy(appShortcuts = v) } }
+    Note(
+        if (vm.shortcuts.hasAccess) {
+            "shortcuts you add from other apps (e.g. a web page from chrome › add to home screen) are listed in the drawer; long-press to remove. this switch adds apps' own shortcuts, like \"new incognito tab\", while you search."
+        } else {
+            "shortcuts need sysreadout to be your default home app. shortcuts added to another launcher stay with it: add them again once sysreadout is the home app."
+        },
+    )
     Toggle("google search fallback", prefs.webSearch) { v -> vm.update { it.copy(webSearch = v) } }
     if (prefs.webSearch) {
         Note("when nothing matches, the drawer offers to search google for what you typed (tap it or press go). it opens in your browser; nothing is sent until you do.")

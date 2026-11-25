@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.repo.refresh()
+        vm.shortcuts.refresh() // access to shortcuts starts when SysReadout becomes the home app
     }
 }
 

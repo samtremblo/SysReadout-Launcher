@@ -56,6 +56,8 @@ data class LauncherPrefs(
     val contactAction: ContactAction = ContactAction.OPEN,
     /** A search with no app or contact match offers to search Google for it (off until switched on). */
     val webSearch: Boolean = false,
+    /** Drawer search also lists apps' own shortcuts ("new incognito tab"), not only pinned ones. */
+    val appShortcuts: Boolean = false,
     /** Pinned log rows, in display order (ids from ProbeCatalog). */
     val logRows: List<String> = ProbeCatalog.defaultIds,
     val logIntervalSec: Int = 2,

@@ -86,6 +86,20 @@
             </intent-filter>
         </activity>
 
+        <!-- "Add to home screen" from other apps (e.g. a web page in Chrome): the shortcut
+             goes into the drawer. Shows no screen of its own. -->
+        <activity
+            android:name=".apps.PinShortcutActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
+            </intent-filter>
+        </activity>
+
         <!-- Receives the Shizuku binder when the user has Shizuku running. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

@@ -40,6 +40,7 @@ import com.asnidev.sysreadout.LauncherViewModel
 import com.asnidev.sysreadout.Screen
 import com.asnidev.sysreadout.apps.AppEntry
 import com.asnidev.sysreadout.apps.ContactEntry
+import com.asnidev.sysreadout.apps.ShortcutEntry
 import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.StyleElement
 import com.asnidev.sysreadout.system.SystemActions
@@ -55,10 +56,15 @@ fun Drawer(vm: LauncherViewModel) {
     val focus = remember { FocusRequester() }
 
     val contactsLoaded by vm.contacts.loaded.collectAsState()
+    val shortcuts by vm.shortcuts.shortcuts.collectAsState()
 
     val q = Search.normalize(query.trim())
     val results = remember(q, apps, prefs.hidden, prefs.renames) {
         Search.filter(apps.filter { it.key !in prefs.hidden }, q, vm::label)
+    }
+    // Pinned shortcuts are listed like apps; apps' own shortcuts only when searching.
+    val links = remember(q, shortcuts) {
+        Search.filter(if (q.isEmpty()) shortcuts.filter { it.pinned } else shortcuts, q) { it.label }
     }
     // Contacts only show for a search, never as a full list under the apps.
     val people = remember(q, contacts, prefs.searchContacts) {
@@ -72,7 +78,10 @@ fun Drawer(vm: LauncherViewModel) {
         if (!vm.launch(app.key)) Toast.makeText(context, "can't open ${app.label}", Toast.LENGTH_SHORT).show()
     }
     val trimmed = query.trim()
-    val offerWeb = prefs.webSearch && q.isNotEmpty() && results.isEmpty() && people.isEmpty()
+    val offerWeb = prefs.webSearch && q.isNotEmpty() && results.isEmpty() && links.isEmpty() && people.isEmpty()
+    val openLink: (ShortcutEntry) -> Unit = { s ->
+        if (!vm.launchShortcut(s)) Toast.makeText(context, "can't open ${s.label}", Toast.LENGTH_SHORT).show()
+    }
     val searchWeb = {
         if (SystemActions.googleSearch(context, trimmed)) vm.screen = Screen.HOME
         else Toast.makeText(context, "no browser to search with", Toast.LENGTH_SHORT).show()
@@ -87,9 +96,9 @@ fun Drawer(vm: LauncherViewModel) {
         if (prefs.autoKeyboard) runCatching { focus.requestFocus() }
     }
     // Only an app opens by itself, and only when it's the one match of any kind.
-    LaunchedEffect(q, results.size, people.size, waitingForContacts) {
-        if (prefs.autoLaunch && q.isNotEmpty() && results.size == 1 && people.isEmpty() && !waitingForContacts) {
-            open(results.first())
+    LaunchedEffect(q, results.size, links.size, people.size, waitingForContacts) {
+        if (prefs.autoLaunch && q.isNotEmpty() && people.isEmpty() && !waitingForContacts && results.size + links.size == 1) {
+            results.firstOrNull()?.let(open) ?: links.firstOrNull()?.let(openLink)
         }
     }
 
@@ -109,7 +118,10 @@ fun Drawer(vm: LauncherViewModel) {
             cursorBrush = SolidColor(styled.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
-                results.firstOrNull()?.let(open) ?: people.firstOrNull()?.let(openContact) ?: if (offerWeb) searchWeb() else Unit
+                results.firstOrNull()?.let(open)
+                    ?: links.firstOrNull()?.let(openLink)
+                    ?: people.firstOrNull()?.let(openContact)
+                    ?: if (offerWeb) searchWeb() else Unit
             }),
             modifier = Modifier.fillMaxWidth().focusRequester(focus).padding(bottom = 12.dp),
             decorationBox = { inner ->
@@ -130,15 +142,13 @@ fun Drawer(vm: LauncherViewModel) {
         )
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(results, key = { it.key.encode() }) { app -> DrawerRow(vm, app, styled, open) }
+            if (links.isNotEmpty()) {
+                item(key = "shortcuts-header") { SectionLabel("# shortcuts", styled, top = results.isNotEmpty()) }
+                items(links, key = { "shortcut:${it.key}" }) { s -> ShortcutRow(vm, s, styled, openLink) }
+            }
             if (people.isNotEmpty()) {
                 item(key = "contacts-header") {
-                    Text(
-                        styled.text(StyleElement.DRAWER, "# contacts"),
-                        style = styled.drawer,
-                        color = styled.drawer.color.copy(alpha = 0.45f),
-                        maxLines = 1,
-                        modifier = Modifier.padding(top = if (results.isEmpty()) 0.dp else 12.dp, bottom = 2.dp),
-                    )
+                    SectionLabel("# contacts", styled, top = results.isNotEmpty() || links.isNotEmpty())
                 }
                 items(people, key = { "contact:${it.id}" }) { c -> ContactRow(vm, c, styled, openContact) }
             }
@@ -228,6 +238,36 @@ private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Sty
                 MenuItem("call") { run(ContactAction.CALL) }
                 MenuItem("text") { run(ContactAction.TEXT) }
             }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String, styled: Styled, top: Boolean) =
+    Text(
+        styled.text(StyleElement.DRAWER, text),
+        style = styled.drawer,
+        color = styled.drawer.color.copy(alpha = 0.45f),
+        maxLines = 1,
+        modifier = Modifier.padding(top = if (top) 12.dp else 0.dp, bottom = 2.dp),
+    )
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ShortcutRow(vm: LauncherViewModel, s: ShortcutEntry, styled: Styled, open: (ShortcutEntry) -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        Text(
+            styled.text(StyleElement.DRAWER, s.label) + if (s.isWork) " [w]" else "",
+            style = styled.drawer,
+            maxLines = 1,
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = { open(s) }, onLongClick = { menu = s.pinned })
+                .padding(vertical = 7.dp),
+        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            MenuItem("remove shortcut") { menu = false; vm.shortcuts.remove(s) }
         }
     }
 }

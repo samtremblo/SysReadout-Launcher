@@ -57,6 +57,7 @@ class SettingsStore(private val context: Context) {
         val searchContacts = booleanPreferencesKey("search_contacts")
         val contactAction = stringPreferencesKey("contact_action")
         val webSearch = booleanPreferencesKey("web_search")
+        val appShortcuts = booleanPreferencesKey("app_shortcuts")
         val logRows = stringPreferencesKey("log_rows")
         val logInterval = intPreferencesKey("log_interval")
         val showStream = booleanPreferencesKey("show_stream")
@@ -148,6 +149,7 @@ class SettingsStore(private val context: Context) {
             searchContacts = p[K.searchContacts] ?: d.searchContacts,
             contactAction = enumOr(p[K.contactAction], d.contactAction),
             webSearch = p[K.webSearch] ?: d.webSearch,
+            appShortcuts = p[K.appShortcuts] ?: d.appShortcuts,
             logRows = p[K.logRows]?.split(',')?.filter { it.isNotBlank() } ?: d.logRows,
             logIntervalSec = (p[K.logInterval] ?: d.logIntervalSec).coerceIn(LauncherPrefs.INTERVALS.first(), LauncherPrefs.INTERVALS.last()),
             showStream = p[K.showStream] ?: d.showStream,
@@ -179,6 +181,7 @@ class SettingsStore(private val context: Context) {
         p[K.searchContacts] = v.searchContacts
         p[K.contactAction] = v.contactAction.name
         p[K.webSearch] = v.webSearch
+        p[K.appShortcuts] = v.appShortcuts
         p[K.logRows] = v.logRows.joinToString(",")
         p[K.logInterval] = v.logIntervalSec
         p[K.showStream] = v.showStream

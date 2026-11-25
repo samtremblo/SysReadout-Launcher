@@ -19,6 +19,8 @@ import com.asnidev.sysreadout.apps.AppEntry
 import com.asnidev.sysreadout.apps.AppRepository
 import com.asnidev.sysreadout.apps.ContactEntry
 import com.asnidev.sysreadout.apps.ContactRepository
+import com.asnidev.sysreadout.apps.ShortcutEntry
+import com.asnidev.sysreadout.apps.ShortcutRepository
 import com.asnidev.sysreadout.data.AppKey
 import com.asnidev.sysreadout.data.Backup
 import com.asnidev.sysreadout.data.ContactAction
@@ -130,6 +132,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         combine(store.monitor, homePreview) { m, preview -> preview.applyTo(m) }
             .stateIn(scope, SharingStarted.Eagerly, MonitorPrefs())
 
+    /** Pinned (and optionally apps' own) shortcuts; empty unless SysReadout is the home app. */
+    val shortcuts = ShortcutRepository(app, scope)
+
     /** Contacts for drawer search; empty unless "search contacts" is on and allowed. */
     val contacts = ContactRepository(app, scope)
 
@@ -196,6 +201,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         restoreDnsMonitor()
         scope.launch {
             prefs.map { it.searchContacts }.distinctUntilChanged().collect { contacts.setEnabled(it) }
+        }
+        scope.launch {
+            prefs.map { it.appShortcuts }.distinctUntilChanged().collect { shortcuts.setIncludeAppShortcuts(it) }
         }
     }
 
@@ -332,6 +340,12 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun launchShortcut(s: ShortcutEntry): Boolean {
+        val ok = shortcuts.launch(s)
+        if (ok) screen = Screen.HOME
+        return ok
+    }
+
     fun openContact(contact: ContactEntry, action: ContactAction = prefs.value.contactAction): Boolean {
         val ok = when {
             contact.number == null -> contacts.open(contact)
@@ -431,6 +445,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { getApplication<Application>().unregisterReceiver(screenOff) }
         repo.close()
         contacts.close()
+        shortcuts.close()
         shizuku.close()
     }
 
