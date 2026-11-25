@@ -48,6 +48,7 @@ import android.telephony.TelephonyManager
 import android.view.Display
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import com.asnidev.sysreadout.monitor.DnsVpnService
 import com.asnidev.sysreadout.monitor.NotifListener
 import com.asnidev.sysreadout.monitor.NotifLog
 import java.io.File
@@ -412,14 +413,52 @@ class ProbeReader(private val context: Context) {
             if (tm.isNetworkRoaming) "  roaming" else ""
     }
 
+    /**
+     * The phone's address on the local network (Wi-Fi, mobile, Ethernet) with
+     * its gateway, and, while a VPN is up, the VPN's own address too. With a VPN,
+     * Android's "active network" is the VPN, so the local one is looked up separately.
+     * SysReadout's own DNS monitor is left out: its address is always the same.
+     */
+    @Suppress("DEPRECATION") // allNetworks: the replacement is a callback, too much for one sample
     private fun ip(): String {
-        val lp = cm.getLinkProperties(cm.activeNetwork) ?: return "offline"
-        val v4 = lp.linkAddresses.firstOrNull { it.address is Inet4Address }
-        val v6 = lp.linkAddresses.count { it.address is Inet6Address }
-        // Prefer the IPv4 gateway; the IPv6 one is usually an unhelpful link-local fe80:: address.
-        val gateways = lp.routes.filter { it.isDefaultRoute && it.gateway?.isAnyLocalAddress == false }.mapNotNull { it.gateway }
-        val gw = (gateways.firstOrNull { it is Inet4Address } ?: gateways.firstOrNull())?.hostAddress
-        return "${v4 ?: "no ipv4"}" + (gw?.let { "  gw $it" } ?: "") + if (v6 > 0) "  +$v6 v6" else ""
+        val networks = cm.allNetworks.mapNotNull { n ->
+            val caps = cm.getNetworkCapabilities(n) ?: return@mapNotNull null
+            val lp = cm.getLinkProperties(n) ?: return@mapNotNull null
+            Triple(n, caps, lp)
+        }
+        val active = cm.activeNetwork
+        val vpns = networks.filter { it.second.hasTransport(NetworkCapabilities.TRANSPORT_VPN) }
+            .filterNot { (_, _, lp) -> lp.linkAddresses.any { it.address.hostAddress == DnsVpnService.TUN_ADDRESS } }
+        // The local network: the active one unless that's a VPN, else the best real network with internet.
+        val local = networks.firstOrNull { it.first == active && !it.second.hasTransport(NetworkCapabilities.TRANSPORT_VPN) }
+            ?: networks
+                .filter { !it.second.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && it.second.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                .minByOrNull {
+                    when {
+                        it.second.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> 0
+                        it.second.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> 1
+                        it.second.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> 2
+                        else -> 3
+                    }
+                }
+        if (local == null && vpns.isEmpty()) return "offline"
+
+        val parts = mutableListOf<String>()
+        local?.third?.let { lp ->
+            val v4 = lp.linkAddresses.firstOrNull { it.address is Inet4Address }
+            val v6 = lp.linkAddresses.count { it.address is Inet6Address }
+            // Prefer the IPv4 gateway; the IPv6 one is usually an unhelpful link-local fe80:: address.
+            val gateways = lp.routes.filter { it.isDefaultRoute && it.gateway?.isAnyLocalAddress == false }.mapNotNull { it.gateway }
+            val gw = (gateways.firstOrNull { it is Inet4Address } ?: gateways.firstOrNull())?.hostAddress
+            // With a VPN to fit in too, keep it short: no prefix length, no IPv6 count.
+            val addr = if (vpns.isEmpty()) v4?.toString() else v4?.address?.hostAddress
+            parts += (addr ?: "no ipv4") + (gw?.let { "  gw $it" } ?: "") + if (v6 > 0 && vpns.isEmpty()) "  +$v6 v6" else ""
+        }
+        vpns.forEach { (_, _, lp) ->
+            val addr = lp.linkAddresses.firstOrNull { it.address is Inet4Address } ?: lp.linkAddresses.firstOrNull()
+            parts += "vpn " + (addr?.address?.hostAddress ?: "up")
+        }
+        return parts.joinToString("  ")
     }
 
     private fun fs(dir: File): String {

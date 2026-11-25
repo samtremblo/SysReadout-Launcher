@@ -206,7 +206,9 @@ class DnsVpnService : VpnService() {
         private const val TAG = "DnsMonitor"
         private const val ACTION_STOP = "com.asnidev.sysreadout.DNS_STOP"
         private const val MTU = 4096
-        private const val VPN_ADDRESS = "10.111.222.1"
+        /** The DNS monitor's own tun address (the ip row leaves it out). */
+        const val TUN_ADDRESS = "10.111.222.1"
+        private const val VPN_ADDRESS = TUN_ADDRESS
         const val DNS_ADDRESS = "10.111.222.2"
 
         /** Null when the user has already allowed the VPN; otherwise the consent screen to show. */

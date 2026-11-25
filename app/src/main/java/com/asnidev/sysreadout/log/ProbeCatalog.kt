@@ -82,7 +82,7 @@ object ProbeCatalog {
         ProbeInfo("net", ProbeGroup.NETWORK, "connection type and live throughput", true),
         ProbeInfo("wifi", ProbeGroup.NETWORK, "Wi-Fi signal, link speed, band", true),
         ProbeInfo("cell", ProbeGroup.NETWORK, "mobile operator, network type, signal"),
-        ProbeInfo("ip", ProbeGroup.NETWORK, "IP address and gateway", true),
+        ProbeInfo("ip", ProbeGroup.NETWORK, "IP address and gateway, plus the VPN address while one is on", true),
         ProbeInfo("radio", ProbeGroup.NETWORK, "airplane mode, bluetooth, NFC, location on/off"),
         ProbeInfo("rf", ProbeGroup.NETWORK, "mobile signal quality: RSRP, RSRQ, SINR (LTE/5G) or RSSI"),
         ProbeInfo("link", ProbeGroup.NETWORK, "network type incl. 5G NSA/SA and LTE-CA, carrier bandwidths", needs = Access.PHONE),
