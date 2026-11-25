@@ -149,7 +149,7 @@ class SettingsStore(private val context: Context) {
             contactAction = enumOr(p[K.contactAction], d.contactAction),
             webSearch = p[K.webSearch] ?: d.webSearch,
             logRows = p[K.logRows]?.split(',')?.filter { it.isNotBlank() } ?: d.logRows,
-            logIntervalSec = p[K.logInterval] ?: d.logIntervalSec,
+            logIntervalSec = (p[K.logInterval] ?: d.logIntervalSec).coerceIn(LauncherPrefs.INTERVALS.first(), LauncherPrefs.INTERVALS.last()),
             showStream = p[K.showStream] ?: d.showStream,
             streamTimestamps = p[K.streamTimestamps] ?: d.streamTimestamps,
             showBanner = p[K.showBanner] ?: d.showBanner,

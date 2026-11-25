@@ -54,12 +54,19 @@ fun Drawer(vm: LauncherViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
     val focus = remember { FocusRequester() }
 
+    val contactsLoaded by vm.contacts.loaded.collectAsState()
+
     val q = Search.normalize(query.trim())
-    val visible = apps.filter { it.key !in prefs.hidden }
-    val results = Search.filter(visible, q, vm::label)
+    val results = remember(q, apps, prefs.hidden, prefs.renames) {
+        Search.filter(apps.filter { it.key !in prefs.hidden }, q, vm::label)
+    }
     // Contacts only show for a search, never as a full list under the apps.
-    val people = if (q.isEmpty() || !prefs.searchContacts) emptyList()
-    else Search.filter(contacts, q) { it.name }.take(MAX_CONTACTS)
+    val people = remember(q, contacts, prefs.searchContacts) {
+        if (q.isEmpty() || !prefs.searchContacts) emptyList()
+        else Search.filterNormalized(contacts, q) { it.match }.take(MAX_CONTACTS)
+    }
+    // Still reading contacts: don't open an app that a contact might also match.
+    val waitingForContacts = prefs.searchContacts && !contactsLoaded && vm.contacts.hasPermission()
 
     val open: (AppEntry) -> Unit = { app ->
         if (!vm.launch(app.key)) Toast.makeText(context, "can't open ${app.label}", Toast.LENGTH_SHORT).show()
@@ -80,8 +87,10 @@ fun Drawer(vm: LauncherViewModel) {
         if (prefs.autoKeyboard) runCatching { focus.requestFocus() }
     }
     // Only an app opens by itself, and only when it's the one match of any kind.
-    LaunchedEffect(q, results.size, people.size) {
-        if (prefs.autoLaunch && q.isNotEmpty() && results.size == 1 && people.isEmpty()) open(results.first())
+    LaunchedEffect(q, results.size, people.size, waitingForContacts) {
+        if (prefs.autoLaunch && q.isNotEmpty() && results.size == 1 && people.isEmpty() && !waitingForContacts) {
+            open(results.first())
+        }
     }
 
     Column(

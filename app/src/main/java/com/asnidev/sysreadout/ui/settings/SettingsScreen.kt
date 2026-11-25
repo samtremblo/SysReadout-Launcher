@@ -297,9 +297,13 @@ private fun BackupSection(vm: LauncherViewModel) {
 private fun ContactSearchToggle(vm: LauncherViewModel) {
     val context = LocalContext.current
     val prefs by vm.prefs.collectAsState()
+    // Not observable by itself: re-read here and after each permission answer.
+    var permitted by remember { mutableStateOf(vm.contacts.hasPermission()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        permitted = vm.contacts.hasPermission()
         if (granted) {
             vm.update { it.copy(searchContacts = true) }
+            vm.refreshContacts()
         } else {
             Toast.makeText(context, "without the contacts permission there's nothing to search", Toast.LENGTH_SHORT).show()
         }
@@ -307,7 +311,7 @@ private fun ContactSearchToggle(vm: LauncherViewModel) {
     Toggle("search contacts", prefs.searchContacts) { v ->
         when {
             !v -> vm.update { it.copy(searchContacts = false) }
-            vm.contacts.hasPermission() -> vm.update { it.copy(searchContacts = true) }
+            permitted -> vm.update { it.copy(searchContacts = true) }
             else -> ask.launchOr(context, "this phone has no permission screen", Manifest.permission.READ_CONTACTS)
         }
     }
@@ -324,7 +328,7 @@ private fun ContactSearchToggle(vm: LauncherViewModel) {
                 }
             },
         ) { v -> vm.update { it.copy(contactAction = v) } }
-        if (vm.contacts.hasPermission()) {
+        if (permitted) {
             Note("contacts show under the apps while you type; long-press one for the other actions. calling opens the dialer with the number filled in. a contact without a number always opens. contacts stay on this phone and are never saved by sysreadout.")
         } else {
             Note("the contacts permission was taken away, so no contacts show.")

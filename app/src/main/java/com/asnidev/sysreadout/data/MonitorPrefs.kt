@@ -60,6 +60,8 @@ data class MonitorPrefs(
 
     companion object {
         val INTERVALS = listOf(2, 5, 10, 30)
+        /** The most rows a table can be set to in settings; also enforced on read (e.g. a hand-edited backup). */
+        const val MAX_ROWS = 30
 
         fun fromJson(s: String?): MonitorPrefs {
             val d = MonitorPrefs()
@@ -70,17 +72,17 @@ data class MonitorPrefs(
                 shizukuTip = o.optBoolean("shizukuTip", d.shizukuTip),
                 procs = o.optBoolean("procs", d.procs),
                 procSort = runCatching { ProcSort.valueOf(o.optString("procSort")) }.getOrDefault(d.procSort),
-                procRows = o.optInt("procRows", d.procRows),
+                procRows = o.optInt("procRows", d.procRows).coerceIn(1, MAX_ROWS),
                 appsOnly = o.optBoolean("appsOnly", d.appsOnly),
                 conns = o.optBoolean("conns", d.conns),
-                connRows = o.optInt("connRows", d.connRows),
+                connRows = o.optInt("connRows", d.connRows).coerceIn(1, MAX_ROWS),
                 resolveHosts = o.optBoolean("resolveHosts", d.resolveHosts),
                 screenTime = o.optBoolean("screenTime", d.screenTime),
-                screenRows = o.optInt("screenRows", d.screenRows),
+                screenRows = o.optInt("screenRows", d.screenRows).coerceIn(1, MAX_ROWS),
                 traffic = o.optBoolean("traffic", d.traffic),
-                trafficRows = o.optInt("trafficRows", d.trafficRows),
+                trafficRows = o.optInt("trafficRows", d.trafficRows).coerceIn(1, MAX_ROWS),
                 wakelocks = o.optBoolean("wakelocks", d.wakelocks),
-                wakeRows = o.optInt("wakeRows", d.wakeRows),
+                wakeRows = o.optInt("wakeRows", d.wakeRows).coerceIn(1, MAX_ROWS),
                 dnsVpn = o.optBoolean("dnsVpn", d.dnsVpn),
                 evDns = o.optBoolean("evDns", d.evDns),
                 evLogcat = o.optBoolean("evLogcat", d.evLogcat),
@@ -88,16 +90,16 @@ data class MonitorPrefs(
                 evNotif = o.optBoolean("evNotif", d.evNotif),
                 notifTitles = o.optBoolean("notifTitles", d.notifTitles),
                 notifTable = o.optBoolean("notifTable", d.notifTable),
-                notifRows = o.optInt("notifRows", d.notifRows),
+                notifRows = o.optInt("notifRows", d.notifRows).coerceIn(1, MAX_ROWS),
                 battery = o.optBoolean("battery", d.battery),
-                batteryRows = o.optInt("batteryRows", d.batteryRows),
+                batteryRows = o.optInt("batteryRows", d.batteryRows).coerceIn(1, MAX_ROWS),
                 evApps = o.optBoolean("evApps", d.evApps),
                 evServices = o.optBoolean("evServices", d.evServices),
                 evScreen = o.optBoolean("evScreen", d.evScreen),
                 evProcs = o.optBoolean("evProcs", d.evProcs),
                 evConns = o.optBoolean("evConns", d.evConns),
                 evSystem = o.optBoolean("evSystem", d.evSystem),
-                intervalSec = o.optInt("intervalSec", d.intervalSec),
+                intervalSec = o.optInt("intervalSec", d.intervalSec).coerceIn(INTERVALS.first(), INTERVALS.last()),
             )
         }
     }

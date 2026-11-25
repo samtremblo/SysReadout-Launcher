@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older. Crash state stays on this phone: restored onto a new
+     one it could start SysReadout in safe mode or show another phone's crash. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="crash_guard.xml" />
+    <exclude domain="file" path="last_crash.txt" />
+</full-backup-content>

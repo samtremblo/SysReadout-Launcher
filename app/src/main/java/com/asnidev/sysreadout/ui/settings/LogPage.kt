@@ -284,7 +284,7 @@ private fun BannerSection(vm: LauncherViewModel) {
 
 @Composable
 private fun Rows(label: String, value: Int, onChange: (Int) -> Unit) =
-    Stepper(label, "$value", { onChange((value - 1).coerceAtLeast(1)) }) { onChange((value + 1).coerceAtMost(30)) }
+    Stepper(label, "$value", { onChange((value - 1).coerceAtLeast(1)) }) { onChange((value + 1).coerceAtMost(MonitorPrefs.MAX_ROWS)) }
 
 @Composable
 private fun ProbeRow(probe: ProbeInfo, on: Boolean, onToggle: () -> Unit, trailing: @Composable () -> Unit) {

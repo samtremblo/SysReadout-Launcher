@@ -12,17 +12,23 @@ import android.os.Looper
 import android.provider.ContactsContract
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.asnidev.sysreadout.ui.Search
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.Collator
 
 /** One contact as the drawer shows it. [number] is its primary (or first) phone number, if any. */
-data class ContactEntry(val id: Long, val lookupKey: String, val name: String, val number: String?)
+data class ContactEntry(val id: Long, val lookupKey: String, val name: String, val number: String?) {
+    /** [name] normalized once for matching, so typing doesn't redo it for every contact. */
+    val match: String = Search.normalize(name)
+}
 
 /**
  * The phone's contacts, for drawer search. Read only while the user has
@@ -34,7 +40,11 @@ class ContactRepository(private val context: Context, private val scope: Corouti
     private val _contacts = MutableStateFlow<List<ContactEntry>>(emptyList())
     val contacts: StateFlow<List<ContactEntry>> = _contacts
 
-    private var enabled = false
+    /** True once the list reflects the phone's contacts (false while off or still reading). */
+    private val _loaded = MutableStateFlow(false)
+    val loaded: StateFlow<Boolean> = _loaded
+
+    @Volatile private var enabled = false
     private var loading: Job? = null
     private var observing = false
 
@@ -55,11 +65,12 @@ class ContactRepository(private val context: Context, private val scope: Corouti
                     observing = true
                 }
             }
-            if (_contacts.value.isEmpty()) reload(debounce = false)
+            if (!_loaded.value) reload(debounce = false)
         } else {
             stopObserving()
             loading?.cancel()
             _contacts.value = emptyList()
+            _loaded.value = false
         }
     }
 
@@ -68,11 +79,18 @@ class ContactRepository(private val context: Context, private val scope: Corouti
         loading = scope.launch(Dispatchers.IO) {
             if (debounce) delay(1_000) // sync adapters change contacts in bursts
             if (!enabled || !hasPermission()) return@launch
-            _contacts.value = try {
+            val result = try {
                 query()
             } catch (e: RuntimeException) { // SecurityException if revoked mid-read, provider errors
                 Log.w(TAG, "couldn't read contacts", e)
                 emptyList()
+            }
+            // The query can't be interrupted: if search was switched off meanwhile, drop what it read.
+            withContext(Dispatchers.Main) {
+                if (isActive && enabled) {
+                    _contacts.value = result
+                    _loaded.value = true
+                }
             }
         }
     }
