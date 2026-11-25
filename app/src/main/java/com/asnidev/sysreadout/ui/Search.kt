@@ -27,6 +27,15 @@ object Search {
         }
     }
 
+    /**
+     * The rest of [label] after what was [typed], when the label starts with it
+     * (ignoring case and accents): "ins" + Instagram → "tagram". Null otherwise.
+     */
+    fun completion(label: String, typed: String): String? {
+        if (typed.isEmpty() || label.length < typed.length) return null
+        return if (normalize(label.take(typed.length)) == normalize(typed)) label.drop(typed.length) else null
+    }
+
     /** The items of [all] that match [q], best first; ties keep their order. */
     fun <T> filter(all: List<T>, q: String, boost: ((T) -> Double)? = null, label: (T) -> String): List<T> =
         filterNormalized(all, q, boost) { normalize(label(it)) }

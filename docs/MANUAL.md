@@ -43,6 +43,8 @@ Swipe up. The keyboard opens straight into search (you can turn that off).
 
 - Search ignores accents and matches, in this order: names that **start** with what you typed, names whose **initials** match (`gm` finds *Google Maps*), then names that **contain** it.
 - **Sort by history** (settings › drawer, on by default): matches stay grouped by how well they match (start, initials, anywhere), and within each group the apps and shortcuts you open most, and lately, come first, so the Go key usually opens the one you want. Each launch counts 1 and fades by half every week. Only apps and shortcuts are recorded, never contacts, on the phone only (and in your backups). *Clear history* forgets it; switching the option off also stops recording.
+- Before you type, the drawer lists your most used apps and shortcuts under `# frequent` (with *sort by history* on), then everything under `# all`.
+- As you type, the rest of the top result's name appears dimmed after your text (`ins`*tagram*), or `→ name` when it matched by initials or partway through the name. That's what the Go key opens.
 - When only one app matches, it opens by itself (*launch single match*, can be turned off). The keyboard's Go key opens the first result.
 - Long-press an app to pin it, rename it, hide it, open its app info or uninstall it.
 - Apps from a work profile are marked `[w]`.

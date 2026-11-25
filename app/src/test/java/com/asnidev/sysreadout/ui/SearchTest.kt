@@ -41,4 +41,15 @@ class SearchTest {
         // "Maps" and "Messages" both start with "m": the used one first. "Gmail" only contains it: still last.
         assertEquals(listOf("Messages", "Maps", "Gmail"), Search.filter(names, "m", { used[it] ?: 0.0 }) { it })
     }
+
+    @Test
+    fun completionIsTheRestOfAPrefixMatch() {
+        assertEquals("tagram", Search.completion("Instagram", "ins"))
+        assertEquals("tagram", Search.completion("Instagram", "INS"))
+        assertEquals(" Dupré", Search.completion("Zoé Dupré", "zoe"))
+        assertEquals("", Search.completion("Maps", "maps"))
+        assertNull(Search.completion("Google Maps", "gm")) // initials: no inline completion
+        assertNull(Search.completion("Maps", "mapss"))
+        assertNull(Search.completion("Maps", ""))
+    }
 }

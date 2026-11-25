@@ -34,6 +34,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.asnidev.sysreadout.LauncherViewModel
@@ -79,6 +87,13 @@ fun Drawer(vm: LauncherViewModel) {
             weight?.let { w -> { s: ShortcutEntry -> w(LaunchHistory.shortcutKey(s.key)) } },
         ) { it.label }
     }
+    // Before typing: the most used apps and shortcuts on top, then the full A–Z list.
+    val frequent: List<Any> = remember(q, apps, shortcuts, prefs.hidden, history, prefs.sortByHistory) {
+        if (q.isNotEmpty() || weight == null) return@remember emptyList()
+        val candidates = apps.filter { it.key !in prefs.hidden }.map { it to weight(LaunchHistory.appKey(it.key)) } +
+            shortcuts.filter { it.pinned }.map { it to weight(LaunchHistory.shortcutKey(it.key)) }
+        candidates.filter { it.second >= MIN_FREQUENT }.sortedByDescending { it.second }.take(MAX_FREQUENT).map { it.first }
+    }
     // Contacts only show for a search, never as a full list under the apps.
     val people = remember(q, contacts, prefs.searchContacts) {
         if (q.isEmpty() || !prefs.searchContacts) emptyList()
@@ -123,11 +138,21 @@ fun Drawer(vm: LauncherViewModel) {
             .imePadding()
             .padding(horizontal = 24.dp, vertical = 16.dp),
     ) {
+        // What Go would open, previewed after the cursor: the rest of its name, or "→ name".
+        val topLabel = results.firstOrNull()?.let(vm::label)
+            ?: links.firstOrNull()?.label
+            ?: people.firstOrNull()?.name
+        val ghost = when {
+            topLabel == null || query.isBlank() -> ""
+            else -> Search.completion(topLabel, query) ?: "  → ${styled.text(StyleElement.DRAWER, topLabel)}"
+        }
+        val ghostColor = styled.drawer.color.copy(alpha = 0.4f)
         BasicTextField(
             value = query,
             onValueChange = { query = it },
             singleLine = true,
             textStyle = styled.drawer,
+            visualTransformation = remember(ghost, ghostColor) { GhostCompletion(ghost, ghostColor) },
             cursorBrush = SolidColor(styled.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
@@ -154,6 +179,16 @@ fun Drawer(vm: LauncherViewModel) {
             },
         )
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            if (frequent.isNotEmpty()) {
+                item(key = "frequent-header") { SectionLabel("# frequent", styled, top = false) }
+                items(frequent, key = { "frequent:" + if (it is AppEntry) it.key.encode() else (it as ShortcutEntry).key }) { item ->
+                    when (item) {
+                        is AppEntry -> DrawerRow(vm, item, styled, open)
+                        is ShortcutEntry -> ShortcutRow(vm, item, styled, openLink)
+                    }
+                }
+                item(key = "all-header") { SectionLabel("# all", styled, top = true) }
+            }
             items(results, key = { it.key.encode() }) { app -> DrawerRow(vm, app, styled, open) }
             if (links.isNotEmpty()) {
                 item(key = "shortcuts-header") { SectionLabel("# shortcuts", styled, top = results.isNotEmpty()) }
@@ -225,6 +260,10 @@ private fun DrawerRow(vm: LauncherViewModel, app: AppEntry, styled: Styled, open
 
 private const val MAX_CONTACTS = 20
 
+/** The "# frequent" section: at most this many, each opened about once in the last week or more. */
+private const val MAX_FREQUENT = 6
+private const val MIN_FREQUENT = 0.5
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Styled, open: (ContactEntry) -> Unit) {
@@ -282,5 +321,27 @@ private fun ShortcutRow(vm: LauncherViewModel, s: ShortcutEntry, styled: Styled,
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             MenuItem("remove shortcut") { menu = false; vm.shortcuts.remove(s) }
         }
+    }
+}
+
+/**
+ * Shows [ghost] dimmed after the typed text without making it part of it:
+ * the cursor and selection stay within what was typed.
+ */
+private class GhostCompletion(private val ghost: String, private val color: Color) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        if (ghost.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+        val shown = buildAnnotatedString {
+            append(text)
+            withStyle(SpanStyle(color = color)) { append(ghost) }
+        }
+        val typed = text.length
+        return TransformedText(
+            shown,
+            object : OffsetMapping {
+                override fun originalToTransformed(offset: Int) = offset
+                override fun transformedToOriginal(offset: Int) = offset.coerceAtMost(typed)
+            },
+        )
     }
 }
