@@ -1,5 +1,6 @@
 package com.asnidev.sysreadout.ui.settings
 
+import android.Manifest
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.asnidev.sysreadout.LauncherViewModel
 import com.asnidev.sysreadout.data.AppKey
+import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.EntryStyle
 import com.asnidev.sysreadout.data.HAlign
 import com.asnidev.sysreadout.data.LockMode
@@ -142,6 +144,11 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     Section("drawer")
     Toggle("open keyboard", prefs.autoKeyboard) { v -> vm.update { it.copy(autoKeyboard = v) } }
     Toggle("launch single match", prefs.autoLaunch) { v -> vm.update { it.copy(autoLaunch = v) } }
+    ContactSearchToggle(vm)
+    Toggle("google search fallback", prefs.webSearch) { v -> vm.update { it.copy(webSearch = v) } }
+    if (prefs.webSearch) {
+        Note("when nothing matches, the drawer offers to search google for what you typed (tap it or press go). it opens in your browser; nothing is sent until you do.")
+    }
 
     Section("gestures")
     Link("swipe left", appName(prefs.swipeLeft)) { picking = Picking.LEFT }
@@ -171,6 +178,46 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
         ) { app ->
             vm.update { if (side == Picking.LEFT) it.copy(swipeLeft = app?.key) else it.copy(swipeRight = app?.key) }
             picking = null
+        }
+    }
+}
+
+@Composable
+private fun ContactSearchToggle(vm: LauncherViewModel) {
+    val context = LocalContext.current
+    val prefs by vm.prefs.collectAsState()
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            vm.update { it.copy(searchContacts = true) }
+        } else {
+            Toast.makeText(context, "without the contacts permission there's nothing to search", Toast.LENGTH_SHORT).show()
+        }
+    }
+    Toggle("search contacts", prefs.searchContacts) { v ->
+        when {
+            !v -> vm.update { it.copy(searchContacts = false) }
+            vm.contacts.hasPermission() -> vm.update { it.copy(searchContacts = true) }
+            else -> ask.launchOr(context, "this phone has no permission screen", Manifest.permission.READ_CONTACTS)
+        }
+    }
+    if (prefs.searchContacts) {
+        Cycle(
+            "tapping a contact",
+            prefs.contactAction,
+            ContactAction.entries,
+            show = {
+                when (it) {
+                    ContactAction.OPEN -> "opens it"
+                    ContactAction.CALL -> "calls"
+                    ContactAction.TEXT -> "texts"
+                }
+            },
+        ) { v -> vm.update { it.copy(contactAction = v) } }
+        if (vm.contacts.hasPermission()) {
+            Note("contacts show under the apps while you type; long-press one for the other actions. calling opens the dialer with the number filled in. a contact without a number always opens. contacts stay on this phone and are never saved by sysreadout.")
+        } else {
+            Note("the contacts permission was taken away, so no contacts show.")
+            Link("allow again") { ask.launchOr(context, "this phone has no permission screen", Manifest.permission.READ_CONTACTS) }
         }
     }
 }

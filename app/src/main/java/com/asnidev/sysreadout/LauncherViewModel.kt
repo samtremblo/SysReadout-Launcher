@@ -17,7 +17,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.asnidev.sysreadout.apps.AppEntry
 import com.asnidev.sysreadout.apps.AppRepository
+import com.asnidev.sysreadout.apps.ContactEntry
+import com.asnidev.sysreadout.apps.ContactRepository
 import com.asnidev.sysreadout.data.AppKey
+import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.EntryStyle
 import com.asnidev.sysreadout.data.HAlign
 import com.asnidev.sysreadout.data.VAlign
@@ -55,6 +58,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -121,6 +125,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         combine(store.monitor, homePreview) { m, preview -> preview.applyTo(m) }
             .stateIn(scope, SharingStarted.Eagerly, MonitorPrefs())
 
+    /** Contacts for drawer search; empty unless "search contacts" is on and allowed. */
+    val contacts = ContactRepository(app, scope)
+
     /** Completed once the saved settings have reached [prefs] and [monitor] (they start as defaults). */
     private val settingsLoaded = CompletableDeferred<Unit>()
 
@@ -182,7 +189,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                 .collect { shizuku.setEnabled(it) }
         }
         restoreDnsMonitor()
+        scope.launch {
+            prefs.map { it.searchContacts }.distinctUntilChanged().collect { contacts.setEnabled(it) }
+        }
     }
+
+    /** Re-reads contacts if search is on: the permission may have been granted or revoked meanwhile. */
+    fun refreshContacts() = contacts.setEnabled(prefs.value.searchContacts)
 
     /** Brings the DNS monitor back after the launcher restarts, if the user left it on. */
     private fun restoreDnsMonitor() {
@@ -247,6 +260,18 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun launch(key: AppKey): Boolean {
         val ok = repo.launch(key)
+        if (ok) screen = Screen.HOME
+        return ok
+    }
+
+    /** Does the tap action chosen in settings; a contact without a number is opened instead. */
+    fun openContact(contact: ContactEntry, action: ContactAction = prefs.value.contactAction): Boolean {
+        val ok = when {
+            contact.number == null -> contacts.open(contact)
+            action == ContactAction.CALL -> contacts.dial(contact)
+            action == ContactAction.TEXT -> contacts.message(contact)
+            else -> contacts.open(contact)
+        }
         if (ok) screen = Screen.HOME
         return ok
     }
@@ -338,6 +363,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         runCatching { getApplication<Application>().unregisterReceiver(screenOff) }
         repo.close()
+        contacts.close()
         shizuku.close()
     }
 

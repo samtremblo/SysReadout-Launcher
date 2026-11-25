@@ -23,8 +23,8 @@ android {
         applicationId = "com.sysreadout.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.2.4"
+        versionCode = 7
+        versionName = "0.2.5"
     }
 
     signingConfigs {
@@ -39,6 +39,12 @@ android {
     }
 
     buildTypes {
+        // Test builds install next to the F-Droid / release copy (different signing key)
+        // instead of failing to replace it; they show up as "SysReadout dev".
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

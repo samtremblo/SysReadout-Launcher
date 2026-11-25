@@ -36,6 +36,10 @@ object SystemActions {
 
     fun openUrl(context: Context, url: String) = open(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
+    /** Hands [query] to Google in the default browser; SysReadout itself doesn't touch the network. */
+    fun googleSearch(context: Context, query: String) =
+        openUrl(context, "https://www.google.com/search?q=" + Uri.encode(query))
+
     fun isDefaultLauncher(context: Context): Boolean {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         return context.packageManager.resolveActivity(home, 0)?.activityInfo?.packageName == context.packageName

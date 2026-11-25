@@ -1,7 +1,7 @@
 SysReadout Launcher is a minimal home screen for people who like to know what their phone is doing. Behind a short list of your apps runs a live, terminal-style readout of the system: pinned status rows, monitor tables and a scrolling event log, styled like an old CRT terminal if you want it to be.
 
 The launcher:
-* A handful of pinned apps as clean text entries, limited only by screen height; everything else is one swipe away in a searchable drawer.
+* A handful of pinned apps as clean text entries, limited only by screen height; everything else is one swipe away in a searchable drawer, which can also find your contacts if you switch that on.
 * Gestures: swipe up for apps, down for notifications, left/right for an app of your choice, double-tap to lock, long-press for settings.
 * Hidden apps, renaming, work profiles.
 * Switch the log off and it is simply a clean, quiet list of apps.

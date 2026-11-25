@@ -19,7 +19,7 @@ From a full CRT terminal to a plain list of apps: every look, the log and each e
 ## Features
 
 **Launcher**
-- Pinned apps as text entries, as many as fit the screen; a searchable drawer (prefix, initials, substring; opens a single match by itself).
+- Pinned apps as text entries, as many as fit the screen; a searchable drawer (prefix, initials, substring; opens a single match by itself), which can also search your contacts and fall back to a Google search when nothing matches (both off by default).
 - Gestures: up for apps, down for notifications, left/right for an app you choose, double-tap to lock, long-press for settings.
 - Hidden apps, renaming, work profiles.
 - Safe mode: should it ever crash twice right after starting, it comes back as a plain launcher until you resume, with the crash report under settings › about.
@@ -75,6 +75,7 @@ Nothing beyond the basics is used until you switch on the feature that needs it,
 | Phone | 5G/LTE link details | asked when you switch it on |
 | Bluetooth connect | connected devices and their battery | asked when you switch it on |
 | Physical activity | step count | asked when you switch it on |
+| Contacts | *search contacts* in the drawer; read into memory only, never saved or sent | asked when you switch it on |
 | Bluetooth (Android ≤ 11) | reading whether Bluetooth is on | install-time on old Android |
 
 ## Privacy

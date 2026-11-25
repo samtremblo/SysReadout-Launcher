@@ -51,6 +51,9 @@ class SettingsStore(private val context: Context) {
         val doubleTapLock = booleanPreferencesKey("double_tap_lock")
         val autoKeyboard = booleanPreferencesKey("auto_keyboard")
         val autoLaunch = booleanPreferencesKey("auto_launch")
+        val searchContacts = booleanPreferencesKey("search_contacts")
+        val contactAction = stringPreferencesKey("contact_action")
+        val webSearch = booleanPreferencesKey("web_search")
         val logRows = stringPreferencesKey("log_rows")
         val logInterval = intPreferencesKey("log_interval")
         val showStream = booleanPreferencesKey("show_stream")
@@ -113,6 +116,9 @@ class SettingsStore(private val context: Context) {
             doubleTapLock = p[K.doubleTapLock] ?: d.doubleTapLock,
             autoKeyboard = p[K.autoKeyboard] ?: d.autoKeyboard,
             autoLaunch = p[K.autoLaunch] ?: d.autoLaunch,
+            searchContacts = p[K.searchContacts] ?: d.searchContacts,
+            contactAction = enumOr(p[K.contactAction], d.contactAction),
+            webSearch = p[K.webSearch] ?: d.webSearch,
             logRows = p[K.logRows]?.split(',')?.filter { it.isNotBlank() } ?: d.logRows,
             logIntervalSec = p[K.logInterval] ?: d.logIntervalSec,
             showStream = p[K.showStream] ?: d.showStream,
@@ -141,6 +147,9 @@ class SettingsStore(private val context: Context) {
         p[K.doubleTapLock] = v.doubleTapLock
         p[K.autoKeyboard] = v.autoKeyboard
         p[K.autoLaunch] = v.autoLaunch
+        p[K.searchContacts] = v.searchContacts
+        p[K.contactAction] = v.contactAction.name
+        p[K.webSearch] = v.webSearch
         p[K.logRows] = v.logRows.joinToString(",")
         p[K.logInterval] = v.logIntervalSec
         p[K.showStream] = v.showStream

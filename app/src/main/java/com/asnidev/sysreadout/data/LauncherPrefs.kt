@@ -33,6 +33,9 @@ enum class LogLayout { CLASSIC, FEED }
 /** What SysReadout does with the lock-screen wallpaper. OFF leaves it alone. */
 enum class LockMode { OFF, IMAGE, SNAPSHOT }
 
+/** What tapping a contact in the drawer does. Without a phone number, CALL and TEXT open the contact. */
+enum class ContactAction { OPEN, CALL, TEXT }
+
 data class LauncherPrefs(
     val pinned: List<AppKey> = emptyList(),
     val hidden: Set<AppKey> = emptySet(),
@@ -48,6 +51,11 @@ data class LauncherPrefs(
     val doubleTapLock: Boolean = false,
     val autoKeyboard: Boolean = true,
     val autoLaunch: Boolean = true,
+    /** Drawer search also lists contacts (needs the contacts permission; off until switched on). */
+    val searchContacts: Boolean = false,
+    val contactAction: ContactAction = ContactAction.OPEN,
+    /** A search with no app or contact match offers to search Google for it (off until switched on). */
+    val webSearch: Boolean = false,
     /** Pinned log rows, in display order (ids from ProbeCatalog). */
     val logRows: List<String> = ProbeCatalog.defaultIds,
     val logIntervalSec: Int = 2,

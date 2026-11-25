@@ -45,6 +45,8 @@ Swipe up. The keyboard opens straight into search (you can turn that off).
 - When only one app matches, it opens by itself (*launch single match*, can be turned off). The keyboard's Go key opens the first result.
 - Long-press an app to pin it, rename it, hide it, open its app info or uninstall it.
 - Apps from a work profile are marked `[w]`.
+- **Google search fallback** (settings › drawer, off by default): when no app or contact matches, the drawer shows *search google for "…"*. Tap it or press Go to open the search in your browser. What you typed goes to Google only when you do that; SysReadout itself makes no network request.
+- **Contacts** (settings › drawer › *search contacts*, off by default): matching contacts are listed under `# contacts`, below the apps, with the same matching rules. Tapping one does what *tapping a contact* (just under the switch) says: *opens it* in your contacts app (the default), *calls* (opens the dialer with the number filled in; SysReadout places no calls) or *texts* (opens your messaging app). A contact without a phone number always opens. Long-press for the other actions: *open contact*, *call*, *text*. Switching it on asks for the contacts permission. Contacts are read into memory while the option is on and are never saved or sent anywhere. With it on, *launch single match* only opens an app when no contact matches too; the Go key opens the first app, or does the tap action on the first contact if no app matches.
 
 Hidden apps are listed under settings › hidden apps, where you can bring them back.
 

@@ -3,6 +3,7 @@ package com.asnidev.sysreadout.ui
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,25 +34,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.asnidev.sysreadout.LauncherViewModel
+import com.asnidev.sysreadout.Screen
 import com.asnidev.sysreadout.apps.AppEntry
+import com.asnidev.sysreadout.apps.ContactEntry
+import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.StyleElement
-import java.text.Normalizer
-
-private fun normalize(s: String) =
-    Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
-
-/** Prefix matches first, then word-initial matches ("gm" → Google Maps), then substring. */
-private fun rank(label: String, q: String): Int? {
-    val l = normalize(label)
-    return when {
-        l.startsWith(q) -> 0
-        l.split(' ', '-', '.').filter { it.isNotEmpty() }.joinToString("") { it.take(1) }.startsWith(q) -> 1
-        l.contains(q) -> 2
-        else -> null
-    }
-}
+import com.asnidev.sysreadout.system.SystemActions
 
 @Composable
 fun Drawer(vm: LauncherViewModel) {
@@ -59,24 +50,38 @@ fun Drawer(vm: LauncherViewModel) {
     val styled = LocalStyled.current
     val prefs by vm.prefs.collectAsState()
     val apps by vm.apps.collectAsState()
+    val contacts by vm.contacts.contacts.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
     val focus = remember { FocusRequester() }
 
-    val q = normalize(query.trim())
+    val q = Search.normalize(query.trim())
     val visible = apps.filter { it.key !in prefs.hidden }
-    val results = if (q.isEmpty()) visible else visible
-        .mapNotNull { app -> rank(vm.label(app), q)?.let { app to it } }
-        .sortedBy { it.second }
-        .map { it.first }
+    val results = Search.filter(visible, q, vm::label)
+    // Contacts only show for a search, never as a full list under the apps.
+    val people = if (q.isEmpty() || !prefs.searchContacts) emptyList()
+    else Search.filter(contacts, q) { it.name }.take(MAX_CONTACTS)
 
     val open: (AppEntry) -> Unit = { app ->
         if (!vm.launch(app.key)) Toast.makeText(context, "can't open ${app.label}", Toast.LENGTH_SHORT).show()
     }
+    val trimmed = query.trim()
+    val offerWeb = prefs.webSearch && q.isNotEmpty() && results.isEmpty() && people.isEmpty()
+    val searchWeb = {
+        if (SystemActions.googleSearch(context, trimmed)) vm.screen = Screen.HOME
+        else Toast.makeText(context, "no browser to search with", Toast.LENGTH_SHORT).show()
+    }
+    val openContact: (ContactEntry) -> Unit = { c ->
+        if (!vm.openContact(c)) Toast.makeText(context, "no app for that", Toast.LENGTH_SHORT).show()
+    }
 
-    // Throws if the field isn't attached yet; the keyboard is a convenience, not worth a crash.
-    LaunchedEffect(Unit) { if (prefs.autoKeyboard) runCatching { focus.requestFocus() } }
-    LaunchedEffect(q, results.size) {
-        if (prefs.autoLaunch && q.isNotEmpty() && results.size == 1) open(results.first())
+    LaunchedEffect(Unit) {
+        vm.refreshContacts() // picks up a permission granted or revoked in Android settings
+        // Throws if the field isn't attached yet; the keyboard is a convenience, not worth a crash.
+        if (prefs.autoKeyboard) runCatching { focus.requestFocus() }
+    }
+    // Only an app opens by itself, and only when it's the one match of any kind.
+    LaunchedEffect(q, results.size, people.size) {
+        if (prefs.autoLaunch && q.isNotEmpty() && results.size == 1 && people.isEmpty()) open(results.first())
     }
 
     Column(
@@ -94,7 +99,9 @@ fun Drawer(vm: LauncherViewModel) {
             textStyle = styled.drawer,
             cursorBrush = SolidColor(styled.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { results.firstOrNull()?.let(open) }),
+            keyboardActions = KeyboardActions(onGo = {
+                results.firstOrNull()?.let(open) ?: people.firstOrNull()?.let(openContact) ?: if (offerWeb) searchWeb() else Unit
+            }),
             modifier = Modifier.fillMaxWidth().focusRequester(focus).padding(bottom = 12.dp),
             decorationBox = { inner ->
                 Row {
@@ -114,6 +121,30 @@ fun Drawer(vm: LauncherViewModel) {
         )
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(results, key = { it.key.encode() }) { app -> DrawerRow(vm, app, styled, open) }
+            if (people.isNotEmpty()) {
+                item(key = "contacts-header") {
+                    Text(
+                        styled.text(StyleElement.DRAWER, "# contacts"),
+                        style = styled.drawer,
+                        color = styled.drawer.color.copy(alpha = 0.45f),
+                        maxLines = 1,
+                        modifier = Modifier.padding(top = if (results.isEmpty()) 0.dp else 12.dp, bottom = 2.dp),
+                    )
+                }
+                items(people, key = { "contact:${it.id}" }) { c -> ContactRow(vm, c, styled, openContact) }
+            }
+            if (offerWeb) {
+                item(key = "web-search") {
+                    Text(
+                        styled.text(StyleElement.DRAWER, "search google for \"$trimmed\" ›"),
+                        style = styled.drawer,
+                        color = styled.accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().clickable(onClick = searchWeb).padding(vertical = 7.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -156,6 +187,38 @@ private fun DrawerRow(vm: LauncherViewModel, app: AppEntry, styled: Styled, open
         RenameDialog(app.label, vm.label(app), onDismiss = { renaming = false }) {
             vm.rename(app.key, it)
             renaming = false
+        }
+    }
+}
+
+private const val MAX_CONTACTS = 20
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Styled, open: (ContactEntry) -> Unit) {
+    val context = LocalContext.current
+    var menu by remember { mutableStateOf(false) }
+    val run = { action: ContactAction ->
+        menu = false
+        if (!vm.openContact(contact, action)) Toast.makeText(context, "no app for that", Toast.LENGTH_SHORT).show()
+    }
+
+    Box {
+        Text(
+            styled.text(StyleElement.DRAWER, contact.name),
+            style = styled.drawer,
+            maxLines = 1,
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = { open(contact) }, onLongClick = { menu = true })
+                .padding(vertical = 7.dp),
+        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            MenuItem("open contact") { run(ContactAction.OPEN) }
+            if (contact.number != null) {
+                MenuItem("call") { run(ContactAction.CALL) }
+                MenuItem("text") { run(ContactAction.TEXT) }
+            }
         }
     }
 }
