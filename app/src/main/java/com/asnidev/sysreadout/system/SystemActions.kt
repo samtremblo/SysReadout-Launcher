@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.AlarmClock
+import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 
@@ -18,6 +19,18 @@ object SystemActions {
             Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel").invoke(sbm)
         }
     }
+
+    @SuppressLint("WrongConstant")
+    fun expandQuickSettings(context: Context) {
+        runCatching {
+            val sbm = context.getSystemService("statusbar")
+            Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel").invoke(sbm)
+        }
+    }
+
+    fun openCamera(context: Context) = open(context, Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
+
+    fun openDialer(context: Context) = open(context, Intent(Intent.ACTION_DIAL))
 
     fun openAlarms(context: Context) = open(context, Intent(AlarmClock.ACTION_SHOW_ALARMS))
 

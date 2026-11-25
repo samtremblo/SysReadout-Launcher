@@ -28,7 +28,7 @@ The home screen has three layers: the **log** in the background, an optional **c
 |---|---|
 | Swipe up | Open the app drawer |
 | Swipe down | Open the notification shade |
-| Swipe left / right | Open the app you assigned (settings › gestures) |
+| Swipe left / right | What you assign under settings › gestures: an app, the app drawer, notifications, quick settings, lock screen, SysReadout settings, flashlight on/off, camera, phone dialer, alarms or calendar |
 | Double-tap empty space | Lock the screen (needs the lock service, see below) |
 | Long-press empty space | Open settings |
 | Tap the clock / date | Open your alarms / calendar |

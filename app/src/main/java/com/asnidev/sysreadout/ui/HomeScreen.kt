@@ -77,8 +77,10 @@ fun HomeScreen(vm: LauncherViewModel, haze: HazeState) {
         when (dir) {
             Swipe.UP -> vm.screen = Screen.DRAWER
             Swipe.DOWN -> SystemActions.expandNotifications(context)
-            Swipe.LEFT -> currentPrefs.swipeLeft?.let(vm::launch)
-            Swipe.RIGHT -> currentPrefs.swipeRight?.let(vm::launch)
+            Swipe.LEFT -> vm.perform(currentPrefs.swipeLeft)
+                ?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+            Swipe.RIGHT -> vm.perform(currentPrefs.swipeRight)
+                ?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
         }
     }
 

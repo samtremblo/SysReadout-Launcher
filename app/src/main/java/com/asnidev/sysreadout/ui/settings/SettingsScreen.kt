@@ -8,6 +8,14 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import com.asnidev.sysreadout.system.Torch
+import com.asnidev.sysreadout.data.GestureKind
+import com.asnidev.sysreadout.data.Gesture
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -116,6 +124,13 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     fun appName(key: AppKey?): String =
         key?.let { k -> apps.firstOrNull { it.key == k }?.let(vm::label) } ?: "none"
 
+    fun describe(g: Gesture): String = when (g.kind) {
+        GestureKind.NONE -> "none"
+        GestureKind.APP -> appName(g.app)
+        else -> g.kind.title
+    }
+    var choosing by remember { mutableStateOf<Picking?>(null) }
+
     if (safe) {
         Section("safe mode")
         Note(
@@ -155,8 +170,8 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     }
 
     Section("gestures")
-    Link("swipe left", appName(prefs.swipeLeft)) { picking = Picking.LEFT }
-    Link("swipe right", appName(prefs.swipeRight)) { picking = Picking.RIGHT }
+    Link("swipe left", describe(prefs.swipeLeft)) { choosing = Picking.LEFT }
+    Link("swipe right", describe(prefs.swipeRight)) { choosing = Picking.RIGHT }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         Toggle("double-tap to lock", prefs.doubleTapLock) { v ->
             vm.update { it.copy(doubleTapLock = v) }
@@ -182,10 +197,56 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
             label = vm::label,
             onDismiss = { picking = null },
         ) { app ->
-            vm.update { if (side == Picking.LEFT) it.copy(swipeLeft = app?.key) else it.copy(swipeRight = app?.key) }
+            val g = Gesture.app(app?.key)
+            vm.update { if (side == Picking.LEFT) it.copy(swipeLeft = g) else it.copy(swipeRight = g) }
             picking = null
         }
     }
+
+    choosing?.let { side ->
+        GesturePickerDialog(onDismiss = { choosing = null }) { kind ->
+            choosing = null
+            if (kind == GestureKind.APP) {
+                picking = side
+            } else {
+                val g = Gesture(kind)
+                vm.update { if (side == Picking.LEFT) it.copy(swipeLeft = g) else it.copy(swipeRight = g) }
+                if (kind == GestureKind.LOCK && !LockService.isRunning) SystemActions.openAccessibilitySettings(context)
+            }
+        }
+    }
+}
+
+/** The actions a swipe can do on this phone. */
+@Composable
+private fun GesturePickerDialog(onDismiss: () -> Unit, onPick: (GestureKind) -> Unit) {
+    val context = LocalContext.current
+    val kinds = remember {
+        GestureKind.entries.filter {
+            when (it) {
+                GestureKind.LOCK -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                GestureKind.FLASHLIGHT -> Torch.available(context)
+                else -> true
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("cancel", style = Type.row) } },
+        title = { Text("swipe does", style = Type.row) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                items(kinds) { kind ->
+                    Text(
+                        kind.title,
+                        style = Type.row,
+                        modifier = Modifier.fillMaxWidth().clickable { onPick(kind) }.padding(vertical = 8.dp),
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable

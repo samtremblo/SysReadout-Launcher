@@ -23,6 +23,8 @@ import com.asnidev.sysreadout.data.AppKey
 import com.asnidev.sysreadout.data.Backup
 import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.EntryStyle
+import com.asnidev.sysreadout.data.Gesture
+import com.asnidev.sysreadout.data.GestureKind
 import com.asnidev.sysreadout.data.HAlign
 import com.asnidev.sysreadout.data.VAlign
 import com.asnidev.sysreadout.data.LauncherPrefs
@@ -42,6 +44,8 @@ import com.asnidev.sysreadout.monitor.SetupItem
 import com.asnidev.sysreadout.monitor.ShizukuBridge
 import com.asnidev.sysreadout.monitor.ShizukuSetup
 import com.asnidev.sysreadout.system.CrashGuard
+import com.asnidev.sysreadout.system.Torch
+import com.asnidev.sysreadout.system.SystemActions
 import com.asnidev.sysreadout.system.LockScreen
 import com.asnidev.sysreadout.system.LockService
 import com.asnidev.sysreadout.ui.Fonts
@@ -306,6 +310,28 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Does the tap action chosen in settings; a contact without a number is opened instead. */
+    /** Does a swipe's action; returns what to tell the user if it couldn't. */
+    fun perform(gesture: Gesture): String? {
+        val app = getApplication<Application>()
+        return when (gesture.kind) {
+            GestureKind.NONE -> null
+            GestureKind.APP -> gesture.app?.let { if (launch(it)) null else "can't open that app" }
+            GestureKind.DRAWER -> { screen = Screen.DRAWER; null }
+            GestureKind.NOTIFICATIONS -> { SystemActions.expandNotifications(app); null }
+            GestureKind.QUICK_SETTINGS -> { SystemActions.expandQuickSettings(app); null }
+            GestureKind.LAUNCHER_SETTINGS -> { screen = Screen.SETTINGS; null }
+            GestureKind.LOCK -> if (LockService.lock()) null else {
+                SystemActions.openAccessibilitySettings(app)
+                "enable the lock service in accessibility settings"
+            }
+            GestureKind.FLASHLIGHT -> if (Torch.toggle(app)) null else "no flashlight to switch"
+            GestureKind.CAMERA -> if (SystemActions.openCamera(app)) null else "no camera app"
+            GestureKind.DIALER -> if (SystemActions.openDialer(app)) null else "no phone app"
+            GestureKind.ALARMS -> if (SystemActions.openAlarms(app)) null else "no clock app"
+            GestureKind.CALENDAR -> if (SystemActions.openCalendar(app)) null else "no calendar app"
+        }
+    }
+
     fun openContact(contact: ContactEntry, action: ContactAction = prefs.value.contactAction): Boolean {
         val ok = when {
             contact.number == null -> contacts.open(contact)

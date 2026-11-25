@@ -140,8 +140,8 @@ class SettingsStore(private val context: Context) {
             entryStyle = enumOr(p[K.entryStyle], d.entryStyle),
             hAlign = enumOr(p[K.hAlign], d.hAlign),
             vAlign = enumOr(p[K.vAlign], d.vAlign),
-            swipeLeft = p[K.swipeLeft]?.let(AppKey::decode),
-            swipeRight = p[K.swipeRight]?.let(AppKey::decode),
+            swipeLeft = Gesture.decode(p[K.swipeLeft]),
+            swipeRight = Gesture.decode(p[K.swipeRight]),
             doubleTapLock = p[K.doubleTapLock] ?: d.doubleTapLock,
             autoKeyboard = p[K.autoKeyboard] ?: d.autoKeyboard,
             autoLaunch = p[K.autoLaunch] ?: d.autoLaunch,
@@ -171,8 +171,8 @@ class SettingsStore(private val context: Context) {
         p[K.entryStyle] = v.entryStyle.name
         p[K.hAlign] = v.hAlign.name
         p[K.vAlign] = v.vAlign.name
-        v.swipeLeft?.let { p[K.swipeLeft] = it.encode() } ?: p.remove(K.swipeLeft)
-        v.swipeRight?.let { p[K.swipeRight] = it.encode() } ?: p.remove(K.swipeRight)
+        v.swipeLeft.encode()?.let { p[K.swipeLeft] = it } ?: p.remove(K.swipeLeft)
+        v.swipeRight.encode()?.let { p[K.swipeRight] = it } ?: p.remove(K.swipeRight)
         p[K.doubleTapLock] = v.doubleTapLock
         p[K.autoKeyboard] = v.autoKeyboard
         p[K.autoLaunch] = v.autoLaunch
