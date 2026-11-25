@@ -275,8 +275,88 @@ object Presets {
         ),
     )
 
-    val builtIn = listOf(default, greenP1, amber, paper, minimal, arcade, lime)
+    /** Hot pink and sunset orange on a night-purple grid, glowing like neon. */
+    val synthwave = Preset(
+        "synthwave",
+        Theme(
+            background = 0xFF140A26, accent = 0xFFFF2E97, backing = 0xFF1E0F38,
+            clock = spec("share-tech-mono", 64f, 0xFFFF2E97, spacing = 0.06f),
+            date = spec("share-tech-mono", 16f, 0xFFFF9E3D, TextCase.UPPER, spacing = 0.2f),
+            menu = spec("share-tech-mono", 22f, 0xFF44E1FF, TextCase.UPPER, spacing = 0.08f),
+            drawer = spec("share-tech-mono", 21f, 0xFF44E1FF, TextCase.UPPER),
+            log = spec("share-tech-mono", 11f, 0xFFB46CFF),
+            banner = spec("share-tech-mono", 14f, 0xFFFF9E3D, TextCase.UPPER, spacing = 0.15f),
+            prefix = "// ",
+            crt = Crt(glow = 0.7f, scanlines = 0.15f, vignette = 0.45f, fringe = 0.3f, menuToo = true),
+        ),
+    )
+
+    /** P7 blue-white phosphor on a radar-room navy, with a slow cold glow. */
+    val iceP7 = Preset(
+        "ice p7",
+        Theme(
+            background = 0xFF020A14, accent = 0xFF9FE8FF, backing = 0xFF041424,
+            clock = spec("vt323", 84f, 0xFFCFF4FF),
+            date = spec("vt323", 24f, 0xFF5FA8C8, TextCase.UPPER, spacing = 0.05f),
+            menu = spec("vt323", 30f, 0xFF9FE8FF, TextCase.UPPER, spacing = 0.04f),
+            drawer = spec("vt323", 28f, 0xFF9FE8FF, TextCase.UPPER),
+            log = spec("vt323", 15f, 0xFF6CC6E8),
+            banner = spec("vt323", 20f, 0xFFCFF4FF, TextCase.UPPER),
+            prefix = "] ",
+            crt = Crt(glow = 0.55f, scanlines = 0.4f, curvature = 0.3f, vignette = 0.55f, fringe = 0.15f, menuToo = true),
+        ),
+    )
+
+    /** Submarine battle stations: everything red, nothing that ruins night vision. */
+    val redAlert = Preset(
+        "red alert",
+        Theme(
+            background = 0xFF0C0000, accent = 0xFFFF2A1A, backing = 0xFF180200,
+            clock = spec("px437-vga", 64f, 0xFFFF2A1A),
+            date = spec("px437-vga", 16f, 0xFF9E1A10, TextCase.UPPER),
+            menu = spec("px437-vga", 22f, 0xFFFF5040, TextCase.UPPER),
+            drawer = spec("px437-vga", 22f, 0xFFFF5040, TextCase.UPPER),
+            log = spec("px437-vga", 12f, 0xFFC81E12),
+            banner = spec("px437-vga", 14f, 0xFFFF2A1A, TextCase.UPPER),
+            prefix = "! ",
+            crt = Crt(glow = 0.5f, scanlines = 0.55f, vignette = 0.65f, flicker = 0.1f, menuToo = true),
+        ),
+    )
+
+    /** A teletype printout: warm ink on old coffee-stained paper, no glass at all. */
+    val teletype = Preset(
+        "teletype",
+        Theme(
+            background = 0xFF1A140C, accent = 0xFFE9C58A, backing = 0xFF241B10,
+            clock = spec("ibm-plex-mono", 50f, 0xFFF2E3C6, bold = true),
+            date = spec("ibm-plex-mono", 15f, 0xFFA08A66, TextCase.LOWER),
+            menu = spec("ibm-plex-mono", 20f, 0xFFF2E3C6),
+            drawer = spec("ibm-plex-mono", 20f, 0xFFF2E3C6),
+            log = spec("ibm-plex-mono", 10.5f, 0xFF9C8259),
+            banner = spec("ibm-plex-mono", 12f, 0xFFE9C58A, TextCase.UPPER, spacing = 0.1f),
+            prefix = "- ",
+            crt = Crt(grain = 0.25f, vignette = 0.35f),
+        ),
+    )
+
+    /** Pastel candy-shop pixels: bubblegum, mint and lemon. */
+    val bubblegum = Preset(
+        "bubblegum",
+        Theme(
+            background = 0xFF1C1424, accent = 0xFFFF8FD8, backing = 0xFF281C34,
+            clock = spec("press-start", 32f, 0xFFFF8FD8),
+            date = spec("silkscreen", 16f, 0xFFFFE680, TextCase.LOWER),
+            menu = spec("silkscreen", 22f, 0xFF8FFFD2, TextCase.LOWER),
+            drawer = spec("silkscreen", 20f, 0xFF8FFFD2, TextCase.LOWER),
+            log = spec("silkscreen", 11f, 0xFFC8A0FF),
+            banner = spec("silkscreen", 14f, 0xFFFF8FD8, TextCase.UPPER),
+            prefix = "* ",
+            crt = Crt(glow = 0.35f),
+        ),
+    )
+
+    val builtIn = listOf(default, greenP1, amber, paper, minimal, arcade, lime, synthwave, iceP7, redAlert, teletype, bubblegum)
 
     /** Choices offered for the menu-entry prefix. */
-    val prefixes = listOf("", "> ", "$ ", "./", "- ", "• ", "~/", "C:\\> ", "[{n}] ", "{n}. ", "{n} ")
+    val prefixes = listOf("", "> ", "$ ", "./", "- ", "• ", "~/", "C:\\> ", "[{n}] ", "{n}. ", "{n} ", "// ", "] ", "! ", "* ")
 }
