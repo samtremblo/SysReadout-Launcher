@@ -58,6 +58,8 @@ data class LauncherPrefs(
     val webSearch: Boolean = false,
     /** Drawer search also lists apps' own shortcuts ("new incognito tab"), not only pinned ones. */
     val appShortcuts: Boolean = false,
+    /** Among equally good matches, the apps and shortcuts opened most (and lately) come first. */
+    val sortByHistory: Boolean = true,
     /** Pinned log rows, in display order (ids from ProbeCatalog). */
     val logRows: List<String> = ProbeCatalog.defaultIds,
     val logIntervalSec: Int = 2,

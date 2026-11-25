@@ -42,6 +42,7 @@ import com.asnidev.sysreadout.apps.AppEntry
 import com.asnidev.sysreadout.apps.ContactEntry
 import com.asnidev.sysreadout.apps.ShortcutEntry
 import com.asnidev.sysreadout.data.ContactAction
+import com.asnidev.sysreadout.data.LaunchHistory
 import com.asnidev.sysreadout.data.StyleElement
 import com.asnidev.sysreadout.system.SystemActions
 
@@ -59,12 +60,24 @@ fun Drawer(vm: LauncherViewModel) {
     val shortcuts by vm.shortcuts.shortcuts.collectAsState()
 
     val q = Search.normalize(query.trim())
-    val results = remember(q, apps, prefs.hidden, prefs.renames) {
-        Search.filter(apps.filter { it.key !in prefs.hidden }, q, vm::label)
+    val history by vm.history.collectAsState()
+    // Read once per query, not per comparison; null when history sorting is off.
+    val now = remember(q) { System.currentTimeMillis() }
+    val weight: ((String) -> Double)? =
+        if (prefs.sortByHistory) { key -> history[key]?.weightAt(now) ?: 0.0 } else null
+    val results = remember(q, apps, prefs.hidden, prefs.renames, history, prefs.sortByHistory) {
+        Search.filter(
+            apps.filter { it.key !in prefs.hidden }, q,
+            weight?.let { w -> { app: AppEntry -> w(LaunchHistory.appKey(app.key)) } },
+            vm::label,
+        )
     }
     // Pinned shortcuts are listed like apps; apps' own shortcuts only when searching.
-    val links = remember(q, shortcuts) {
-        Search.filter(if (q.isEmpty()) shortcuts.filter { it.pinned } else shortcuts, q) { it.label }
+    val links = remember(q, shortcuts, history, prefs.sortByHistory) {
+        Search.filter(
+            if (q.isEmpty()) shortcuts.filter { it.pinned } else shortcuts, q,
+            weight?.let { w -> { s: ShortcutEntry -> w(LaunchHistory.shortcutKey(s.key)) } },
+        ) { it.label }
     }
     // Contacts only show for a search, never as a full list under the apps.
     val people = remember(q, contacts, prefs.searchContacts) {

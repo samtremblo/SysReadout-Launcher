@@ -163,6 +163,14 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     Section("drawer")
     Toggle("open keyboard", prefs.autoKeyboard) { v -> vm.update { it.copy(autoKeyboard = v) } }
     Toggle("launch single match", prefs.autoLaunch) { v -> vm.update { it.copy(autoLaunch = v) } }
+    Toggle("sort by history", prefs.sortByHistory) { v -> vm.update { it.copy(sortByHistory = v) } }
+    if (prefs.sortByHistory) {
+        Link("clear history") {
+            vm.clearHistory()
+            Toast.makeText(context, "history cleared", Toast.LENGTH_SHORT).show()
+        }
+        Note("among equally good matches, what you open most (lately) comes first. kept on this phone only, apps and shortcuts only, never contacts. switching this off also stops recording.")
+    }
     ContactSearchToggle(vm)
     Toggle("app shortcuts in search", prefs.appShortcuts) { v -> vm.update { it.copy(appShortcuts = v) } }
     Note(
@@ -280,7 +288,7 @@ private fun BackupSection(vm: LauncherViewModel) {
     Link("restore backup", "from a file ›") {
         pick.launchOr(context, "no app to pick a file with", arrayOf("application/json", "text/plain", "application/octet-stream"))
     }
-    Note("home, drawer, log, look, presets, monitor settings and imported fonts. no contacts, log data or wallpaper images are in it.")
+    Note("home, drawer, log, look, presets, monitor settings, launch history and imported fonts. no contacts, log data or wallpaper images are in it.")
 
     restoring?.let { uri ->
         AlertDialog(

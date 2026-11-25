@@ -30,6 +30,8 @@ import com.asnidev.sysreadout.data.GestureKind
 import com.asnidev.sysreadout.data.HAlign
 import com.asnidev.sysreadout.data.VAlign
 import com.asnidev.sysreadout.data.LauncherPrefs
+import com.asnidev.sysreadout.data.LaunchHistory
+import com.asnidev.sysreadout.data.Usage
 import com.asnidev.sysreadout.data.LockMode
 import com.asnidev.sysreadout.data.LogLayout
 import com.asnidev.sysreadout.data.MonitorPrefs
@@ -128,6 +130,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         store.theme.stateIn(scope, SharingStarted.Eagerly, Presets.default.theme)
     val userPresets: StateFlow<List<Preset>> =
         store.presets.stateIn(scope, SharingStarted.Eagerly, emptyList())
+    /** Launch history for drawer ordering (see LaunchHistory). */
+    val history: StateFlow<Map<String, Usage>> =
+        store.history.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    private fun recordLaunch(key: String) {
+        if (!prefs.value.sortByHistory) return // switched off: nothing is recorded either
+        val now = System.currentTimeMillis()
+        scope.launch { store.updateHistory { LaunchHistory.bump(it, key, now) } }
+    }
+
+    fun clearHistory() {
+        scope.launch { store.updateHistory { emptyMap() } }
+    }
+
     val monitor: StateFlow<MonitorPrefs> =
         combine(store.monitor, homePreview) { m, preview -> preview.applyTo(m) }
             .stateIn(scope, SharingStarted.Eagerly, MonitorPrefs())
@@ -324,6 +340,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun launch(key: AppKey): Boolean {
         val ok = repo.launch(key)
+        if (ok) recordLaunch(LaunchHistory.appKey(key))
         if (ok) screen = Screen.HOME
         return ok
     }
@@ -353,6 +370,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun launchShortcut(s: ShortcutEntry): Boolean {
         val ok = shortcuts.launch(s)
+        if (ok) recordLaunch(LaunchHistory.shortcutKey(s.key))
         if (ok) screen = Screen.HOME
         return ok
     }

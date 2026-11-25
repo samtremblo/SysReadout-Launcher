@@ -58,6 +58,8 @@ class SettingsStore(private val context: Context) {
         val contactAction = stringPreferencesKey("contact_action")
         val webSearch = booleanPreferencesKey("web_search")
         val appShortcuts = booleanPreferencesKey("app_shortcuts")
+        val sortByHistory = booleanPreferencesKey("sort_by_history")
+        val history = stringPreferencesKey("launch_history")
         val logRows = stringPreferencesKey("log_rows")
         val logInterval = intPreferencesKey("log_interval")
         val showStream = booleanPreferencesKey("show_stream")
@@ -79,6 +81,15 @@ class SettingsStore(private val context: Context) {
     val theme: Flow<Theme> = data.map(::readTheme)
 
     val presets: Flow<List<Preset>> = data.map { presetsFromJson(it[K.presets]) }
+
+    val history: Flow<Map<String, Usage>> = data.map { LaunchHistory.fromJson(it[K.history]) }
+
+    suspend fun updateHistory(transform: (Map<String, Usage>) -> Map<String, Usage>) {
+        context.dataStore.edit { p ->
+            val next = transform(LaunchHistory.fromJson(p[K.history]))
+            if (next.isEmpty()) p.remove(K.history) else p[K.history] = LaunchHistory.toJson(next)
+        }
+    }
 
     val monitor: Flow<MonitorPrefs> = data.map { MonitorPrefs.fromJson(it[K.monitor]) }
 
@@ -151,6 +162,7 @@ class SettingsStore(private val context: Context) {
             contactAction = enumOr(p[K.contactAction], d.contactAction),
             webSearch = p[K.webSearch] ?: d.webSearch,
             appShortcuts = p[K.appShortcuts] ?: d.appShortcuts,
+            sortByHistory = p[K.sortByHistory] ?: d.sortByHistory,
             logRows = p[K.logRows]?.split(',')?.filter { it.isNotBlank() } ?: d.logRows,
             logIntervalSec = (p[K.logInterval] ?: d.logIntervalSec).coerceIn(LauncherPrefs.INTERVALS.first(), LauncherPrefs.INTERVALS.last()),
             showStream = p[K.showStream] ?: d.showStream,
@@ -184,6 +196,7 @@ class SettingsStore(private val context: Context) {
         p[K.contactAction] = v.contactAction.name
         p[K.webSearch] = v.webSearch
         p[K.appShortcuts] = v.appShortcuts
+        p[K.sortByHistory] = v.sortByHistory
         p[K.logRows] = v.logRows.joinToString(",")
         p[K.logInterval] = v.logIntervalSec
         p[K.showStream] = v.showStream

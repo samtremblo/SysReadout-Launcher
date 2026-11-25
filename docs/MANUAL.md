@@ -42,6 +42,7 @@ The home screen has three layers: the **log** in the background, an optional **c
 Swipe up. The keyboard opens straight into search (you can turn that off).
 
 - Search ignores accents and matches, in this order: names that **start** with what you typed, names whose **initials** match (`gm` finds *Google Maps*), then names that **contain** it.
+- **Sort by history** (settings â€º drawer, on by default): matches stay grouped by how well they match (start, initials, anywhere), and within each group the apps and shortcuts you open most, and lately, come first, so the Go key usually opens the one you want. Each launch counts 1 and fades by half every week. Only apps and shortcuts are recorded, never contacts, on the phone only (and in your backups). *Clear history* forgets it; switching the option off also stops recording.
 - When only one app matches, it opens by itself (*launch single match*, can be turned off). The keyboard's Go key opens the first result.
 - Long-press an app to pin it, rename it, hide it, open its app info or uninstall it.
 - Apps from a work profile are marked `[w]`.
@@ -61,7 +62,7 @@ Long-press an empty part of the home screen. The header (`sysreadout --config â€
 - **home**: clock, date, log background on/off, entry style, horizontal alignment, vertical position.
 - **lock screen**: [section 8](#8-lock-screen).
 - **drawer**, **gestures**, **hidden apps**, **about & licenses**.
-- **backup**: *save backup* writes every setting (home, drawer, log, look, presets, monitor) and your imported fonts to a `.json` file wherever you choose; *restore backup* reads one back and replaces your current settings after asking. Contacts, log data and wallpaper images aren't in it. Pinned apps that aren't installed on the phone you restore to simply don't show.
+- **backup**: *save backup* writes every setting (home, drawer, log, look, presets, monitor), the launch history and your imported fonts to a `.json` file wherever you choose; *restore backup* reads one back and replaces your current settings after asking. Contacts, log data and wallpaper images aren't in it. Pinned apps that aren't installed on the phone you restore to simply don't show.
 
 **Entry styles** keep menu text readable over the log: *frosted* (blurred glass), *highlight* (a solid box), *inverted* (reverse video) or *bare*.
 

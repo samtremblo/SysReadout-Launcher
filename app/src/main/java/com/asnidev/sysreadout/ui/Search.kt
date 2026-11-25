@@ -28,13 +28,16 @@ object Search {
     }
 
     /** The items of [all] that match [q], best first; ties keep their order. */
-    fun <T> filter(all: List<T>, q: String, label: (T) -> String): List<T> =
-        filterNormalized(all, q) { normalize(label(it)) }
+    fun <T> filter(all: List<T>, q: String, boost: ((T) -> Double)? = null, label: (T) -> String): List<T> =
+        filterNormalized(all, q, boost) { normalize(label(it)) }
 
-    /** [filter] where [key] already returns a normalized label. */
-    fun <T> filterNormalized(all: List<T>, q: String, key: (T) -> String): List<T> =
+    /**
+     * [filter] where [key] already returns a normalized label. Within one match
+     * rank, a higher [boost] (launch history) comes first; ties keep their order.
+     */
+    fun <T> filterNormalized(all: List<T>, q: String, boost: ((T) -> Double)? = null, key: (T) -> String): List<T> =
         if (q.isEmpty()) all else all
             .mapNotNull { item -> rankNormalized(key(item), q)?.let { item to it } }
-            .sortedBy { it.second }
+            .sortedWith(compareBy<Pair<T, Int>> { it.second }.thenByDescending { boost?.invoke(it.first) ?: 0.0 })
             .map { it.first }
 }

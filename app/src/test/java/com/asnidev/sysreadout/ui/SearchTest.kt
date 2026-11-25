@@ -33,4 +33,12 @@ class SearchTest {
         val names = listOf("b", "a")
         assertEquals(names, Search.filter(names, "") { it })
     }
+
+    @Test
+    fun historyOrdersWithinARankButNeverAcrossRanks() {
+        val names = listOf("Maps", "Messages", "Gmail")
+        val used = mapOf("Messages" to 5.0, "Gmail" to 50.0)
+        // "Maps" and "Messages" both start with "m": the used one first. "Gmail" only contains it: still last.
+        assertEquals(listOf("Messages", "Maps", "Gmail"), Search.filter(names, "m", { used[it] ?: 0.0 }) { it })
+    }
 }
