@@ -60,6 +60,7 @@ Long-press an empty part of the home screen. The header (`sysreadout --config â€
 - **home**: clock, date, log background on/off, entry style, horizontal alignment, vertical position.
 - **lock screen**: [section 8](#8-lock-screen).
 - **drawer**, **gestures**, **hidden apps**, **about & licenses**.
+- **backup**: *save backup* writes every setting (home, drawer, log, look, presets, monitor) and your imported fonts to a `.json` file wherever you choose; *restore backup* reads one back and replaces your current settings after asking. Contacts, log data and wallpaper images aren't in it. Pinned apps that aren't installed on the phone you restore to simply don't show.
 
 **Entry styles** keep menu text readable over the log: *frosted* (blurred glass), *highlight* (a solid box), *inverted* (reverse video) or *bare*.
 

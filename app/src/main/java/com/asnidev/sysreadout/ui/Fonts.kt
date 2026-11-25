@@ -9,6 +9,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import com.asnidev.sysreadout.R
+import com.asnidev.sysreadout.data.Backup
 import java.io.File
 
 /** [license] names the bundled license file under assets/licenses, if any. */
@@ -114,6 +115,31 @@ object Fonts {
             FontOption(USER_PREFIX + name, target.nameWithoutExtension)
         } catch (e: Exception) {
             null
+        } finally {
+            tmp.delete()
+        }
+    }
+
+    /** Imported font files by name, for a backup; very large ones are left out. */
+    fun exportImported(context: Context): Map<String, ByteArray> =
+        dir(context).listFiles().orEmpty()
+            .filter { it.isFile && !it.name.startsWith(".") && it.length() in 1..Backup.MAX_FONT_BYTES.toLong() }
+            .associate { it.name to it.readBytes() }
+
+    /** Writes a font from a backup; false if it isn't a font Android can draw. Replaces one of the same name. */
+    fun restore(context: Context, name: String, bytes: ByteArray): Boolean {
+        val safe = Backup.fontName(name) ?: return false
+        val target = File(dir(context), safe)
+        val tmp = File(dir(context), ".$safe.part")
+        return try {
+            tmp.writeBytes(bytes)
+            Typeface.Builder(tmp).build() ?: return false
+            if (target.exists()) target.delete()
+            if (!tmp.renameTo(target)) return false
+            synchronized(cache) { cache.remove(USER_PREFIX + safe) }
+            true
+        } catch (e: Exception) {
+            false
         } finally {
             tmp.delete()
         }

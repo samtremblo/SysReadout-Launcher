@@ -1,6 +1,7 @@
 package com.asnidev.sysreadout.ui.settings
 
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -13,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,6 +46,7 @@ import com.asnidev.sysreadout.ui.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 sealed interface Page {
     val title: String
@@ -167,6 +171,8 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
     if (hidden.isEmpty()) Text("  (none)", style = Type.row, color = Palette.dim)
     hidden.forEach { app -> Link(vm.label(app), "[unhide]") { vm.unhide(app.key) } }
 
+    BackupSection(vm)
+
     Section("about")
     Link("about & licenses") { open(Page.About) }
 
@@ -179,6 +185,50 @@ private fun RootPage(vm: LauncherViewModel, open: (Page) -> Unit) {
             vm.update { if (side == Picking.LEFT) it.copy(swipeLeft = app?.key) else it.copy(swipeRight = app?.key) }
             picking = null
         }
+    }
+}
+
+@Composable
+private fun BackupSection(vm: LauncherViewModel) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var restoring by remember { mutableStateOf<Uri?>(null) }
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val ok = vm.saveBackup(uri)
+                Toast.makeText(context, if (ok) "backup saved" else "couldn't write the backup", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> restoring = uri }
+
+    Section("backup")
+    Link("save backup", "to a file ›") {
+        save.launchOr(context, "no app to save a file with", "sysreadout-backup-${LocalDate.now()}.json")
+    }
+    // Some file pickers label .json as text or as nothing at all.
+    Link("restore backup", "from a file ›") {
+        pick.launchOr(context, "no app to pick a file with", arrayOf("application/json", "text/plain", "application/octet-stream"))
+    }
+    Note("home, drawer, log, look, presets, monitor settings and imported fonts. no contacts, log data or wallpaper images are in it.")
+
+    restoring?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { restoring = null },
+            title = { Text("restore backup?", style = Type.row) },
+            text = { Text("this replaces all your current settings and pinned apps.", style = Type.small) },
+            confirmButton = {
+                TextButton(onClick = {
+                    restoring = null
+                    scope.launch {
+                        val problem = vm.restoreBackup(uri)
+                        Toast.makeText(context, problem ?: "backup restored", Toast.LENGTH_LONG).show()
+                    }
+                }) { Text("restore", style = Type.row) }
+            },
+            dismissButton = { TextButton(onClick = { restoring = null }) { Text("cancel", style = Type.row) } },
+        )
     }
 }
 

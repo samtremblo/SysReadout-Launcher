@@ -20,6 +20,7 @@ import com.asnidev.sysreadout.apps.AppRepository
 import com.asnidev.sysreadout.apps.ContactEntry
 import com.asnidev.sysreadout.apps.ContactRepository
 import com.asnidev.sysreadout.data.AppKey
+import com.asnidev.sysreadout.data.Backup
 import com.asnidev.sysreadout.data.ContactAction
 import com.asnidev.sysreadout.data.EntryStyle
 import com.asnidev.sysreadout.data.HAlign
@@ -192,6 +193,46 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch {
             prefs.map { it.searchContacts }.distinctUntilChanged().collect { contacts.setEnabled(it) }
         }
+    }
+
+    /** Writes every setting and imported font to [uri] (a file the user picked). */
+    suspend fun saveBackup(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val app = getApplication<Application>()
+        runCatching {
+            val backup = Backup(store.snapshot(), Fonts.exportImported(app), BuildConfig.VERSION_NAME)
+            app.contentResolver.openOutputStream(uri, "wt")?.use { it.write(backup.toJson().toByteArray(Charsets.UTF_8)) } != null
+        }.onFailure { Log.w(TAG, "backup failed", it) }.getOrDefault(false)
+    }
+
+    /**
+     * Reads a backup from [uri] and replaces the current settings and fonts with it.
+     * Returns null on success, or what went wrong, for the user.
+     */
+    suspend fun restoreBackup(uri: Uri): String? = withContext(Dispatchers.IO) {
+        val app = getApplication<Application>()
+        val text = runCatching {
+            app.contentResolver.openInputStream(uri)?.use { input ->
+                // A real backup is a few kB plus fonts; refuse anything absurd before reading it all.
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    if (out.size() > MAX_BACKUP_BYTES) return@use null
+                }
+                out.toString(Charsets.UTF_8.name())
+            }
+        }.getOrNull() ?: return@withContext "couldn't read that file"
+        val backup = try {
+            Backup.fromJson(text)
+        } catch (e: Backup.InvalidBackup) {
+            return@withContext e.message
+        }
+        val badFonts = backup.fonts.count { (name, bytes) -> !Fonts.restore(app, name, bytes) }
+        store.restore(backup.settings)
+        withContext(Dispatchers.Main) { fontsVersion++ }
+        if (badFonts > 0) "restored, but $badFonts font(s) couldn't be used" else null
     }
 
     /** Re-reads contacts if search is on: the permission may have been granted or revoked meanwhile. */
@@ -369,5 +410,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         const val TAG = "SysReadout"
+        const val MAX_BACKUP_BYTES = 32 * 1024 * 1024
     }
 }

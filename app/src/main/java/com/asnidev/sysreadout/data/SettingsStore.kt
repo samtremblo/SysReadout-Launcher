@@ -8,12 +8,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 import java.io.IOException
@@ -91,6 +94,32 @@ class SettingsStore(private val context: Context) {
 
     suspend fun updateMonitor(transform: (MonitorPrefs) -> MonitorPrefs) {
         context.dataStore.edit { p -> p[K.monitor] = transform(MonitorPrefs.fromJson(p[K.monitor])).toJson() }
+    }
+
+    /** Every saved setting by key, for a backup. */
+    suspend fun snapshot(): Map<String, Any> =
+        context.dataStore.data.first().asMap().mapKeys { it.key.name }
+
+    /**
+     * Replaces every setting with [values] from a backup: anything the backup
+     * doesn't have goes back to its default. Keys this version doesn't know
+     * (from a newer backup) are written as they are and simply not read.
+     */
+    suspend fun restore(values: Map<String, Any>) {
+        context.dataStore.edit { p ->
+            p.clear()
+            values.forEach { (name, v) ->
+                @Suppress("UNCHECKED_CAST")
+                when (v) {
+                    is Boolean -> p[booleanPreferencesKey(name)] = v
+                    is Int -> p[intPreferencesKey(name)] = v
+                    is Long -> p[longPreferencesKey(name)] = v
+                    is Float -> p[floatPreferencesKey(name)] = v
+                    is String -> p[stringPreferencesKey(name)] = v
+                    is Set<*> -> p[stringSetPreferencesKey(name)] = v as Set<String>
+                }
+            }
+        }
     }
 
     private fun readTheme(p: Preferences): Theme =
