@@ -136,7 +136,7 @@ Rows that stay in place and update every few seconds. Under log › *pinned rows
 | `net` | connection type and live throughput | — | yes |
 | `wifi` | Wi-Fi signal, link speed, band | — | yes |
 | `cell` | mobile operator, network type, signal | — |  |
-| `ip` | your address on the local network (Wi-Fi, mobile or Ethernet) and its gateway; with a VPN on, the VPN's address too (`vpn 10.…`). SysReadout's own DNS monitor isn't counted |
+| `ip` | IP address and gateway on the local network (Wi-Fi, mobile or Ethernet); with a VPN on, also the VPN's address (`vpn …`) | — | yes |
 | `radio` | airplane mode, bluetooth, NFC, location on/off | — |  |
 | `rf` | mobile signal quality: RSRP, RSRQ, SINR (LTE/5G) or RSSI | — |  |
 | `link` | network type incl. 5G NSA/SA and LTE-CA, carrier bandwidths | phone |  |
