@@ -44,6 +44,49 @@ object Packets {
         return p
     }
 
+    /**
+     * The monitor relays DNS over UDP only. A lookup that falls back to TCP
+     * (an answer too big for UDP) gets an immediate reset, so the resolver
+     * gives up at once instead of waiting for a handshake that never comes.
+     * Returns that RST+ACK for a TCP SYN to port 53, else null.
+     */
+    fun tcpResetFor(buf: ByteArray, length: Int): ByteArray? {
+        if (length < 40 || (buf[0].toInt() ushr 4) != 4 || buf[9].toInt() != 6) return null
+        val ihl = (buf[0].toInt() and 0x0F) * 4
+        if (length < ihl + 20) return null
+        val flags = buf[ihl + 13].toInt()
+        val syn = flags and 0x02 != 0
+        val rst = flags and 0x04 != 0
+        if (!syn || rst || u16(buf, ihl + 2) != 53) return null
+        val seq = ((buf[ihl + 4].toLong() and 0xFF) shl 24) or ((buf[ihl + 5].toLong() and 0xFF) shl 16) or
+            ((buf[ihl + 6].toLong() and 0xFF) shl 8) or (buf[ihl + 7].toLong() and 0xFF)
+        val ack = (seq + 1) and 0xFFFFFFFFL
+
+        val p = ByteArray(40)
+        p[0] = 0x45
+        put16(p, 2, 40)
+        put16(p, 6, 0x4000)
+        p[8] = 64
+        p[9] = 6 // TCP
+        buf.copyInto(p, 12, 16, 20) // from the address it was sent to
+        buf.copyInto(p, 16, 12, 16) // back to the sender
+        put16(p, 10, checksum(p, 0, 20))
+        put16(p, 20, u16(buf, ihl + 2))
+        put16(p, 22, u16(buf, ihl))
+        // seq 0; ack = their seq + 1 (the SYN counts as one)
+        p[28] = (ack ushr 24).toByte(); p[29] = (ack ushr 16).toByte(); p[30] = (ack ushr 8).toByte(); p[31] = ack.toByte()
+        p[32] = 0x50 // 20-byte header
+        p[33] = 0x14 // RST + ACK
+        // TCP checksum over the pseudo header (addresses, protocol, length) and the segment.
+        val pseudo = ByteArray(12 + 20)
+        p.copyInto(pseudo, 0, 12, 20)
+        pseudo[9] = 6
+        put16(pseudo, 10, 20)
+        p.copyInto(pseudo, 12, 20, 40)
+        put16(p, 36, checksum(pseudo, 0, pseudo.size))
+        return p
+    }
+
     fun checksum(p: ByteArray, offset: Int, length: Int): Int {
         var sum = 0L
         var i = offset
@@ -58,7 +101,7 @@ object Packets {
 
     fun u16(b: ByteArray, i: Int) = ((b[i].toInt() and 0xFF) shl 8) or (b[i + 1].toInt() and 0xFF)
 
-    private fun put16(b: ByteArray, i: Int, v: Int) {
+    internal fun put16(b: ByteArray, i: Int, v: Int) {
         b[i] = (v ushr 8).toByte()
         b[i + 1] = v.toByte()
     }
@@ -75,6 +118,27 @@ object Dns {
         val (name, next) = readName(msg, 12)
         Question(name, Packets.u16(msg, next))
     }.getOrNull()
+
+    /**
+     * [response] cut down to fit [max] bytes the standard way: header with the
+     * TC (truncated) bit and no records, question kept. Unchanged if it fits.
+     */
+    fun truncated(response: ByteArray, max: Int): ByteArray {
+        if (response.size <= max || response.size < 12) return response
+        var end = 12
+        val questions = runCatching {
+            repeat(Packets.u16(response, 4)) { end = readName(response, end).second + 4 }
+            true
+        }.getOrDefault(false)
+        if (!questions || end > response.size || end > max) end = 12
+        val out = response.copyOf(end)
+        out[2] = (out[2].toInt() or 0x02).toByte() // TC
+        if (end == 12) Packets.put16(out, 4, 0)
+        Packets.put16(out, 6, 0)
+        Packets.put16(out, 8, 0)
+        Packets.put16(out, 10, 0)
+        return out
+    }
 
     /** A and AAAA addresses in a response, in the same text form the /proc/net parser uses. */
     fun addresses(msg: ByteArray): List<String> = runCatching {
@@ -128,24 +192,31 @@ object Dns {
 
 /** What the DNS monitor saw, kept in memory so the log can catch up when it's next visible. */
 object DnsLog {
-    data class Lookup(val time: Long, val uid: Int, val name: String, val addresses: List<String>)
+    /** [seq] is set by [add]: lookups are answered on several threads, so times can arrive out of order. */
+    data class Lookup(val time: Long, val uid: Int, val name: String, val addresses: List<String>, val seq: Long = 0)
 
     val running = MutableStateFlow(false)
 
     private val lookups = ArrayDeque<Lookup>()
+    private var nextSeq = 1L
     private val hosts = object : LinkedHashMap<String, String>(512, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 4096
     }
 
     @Synchronized
     fun add(lookup: Lookup) {
-        lookups.addLast(lookup)
+        lookups.addLast(lookup.copy(seq = nextSeq++))
         while (lookups.size > 2000) lookups.removeFirst()
         lookup.addresses.forEach { hosts[it] = lookup.name }
     }
 
+    /** Lookups added after the one numbered [seq] (0: all that are kept). */
     @Synchronized
-    fun since(time: Long): List<Lookup> = lookups.filter { it.time > time }
+    fun since(seq: Long): List<Lookup> = lookups.filter { it.seq > seq }
+
+    /** The number of the newest lookup, to skip everything up to now. */
+    @Synchronized
+    fun latestSeq(): Long = nextSeq - 1
 
     /** The name an app looked up to get [ip], if the monitor saw it. */
     @Synchronized

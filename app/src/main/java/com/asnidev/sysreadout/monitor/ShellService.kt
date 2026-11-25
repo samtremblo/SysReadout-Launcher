@@ -18,9 +18,11 @@ class ShellService : IShellService.Stub() {
 
     override fun protocol(): Int = ShellProtocol.VERSION
 
-    override fun exec(command: String, timeoutMs: Long): String? = ShellExec.run(command, timeoutMs)
+    override fun exec(command: String, timeoutMs: Long): String? =
+        if (ShellPolicy.allowsCommand(command)) ShellExec.run(command, timeoutMs) else null
 
-    override fun readFile(path: String): String? = runCatching { File(path).readText() }.getOrNull()
+    override fun readFile(path: String): String? =
+        if (ShellPolicy.allowsPath(path)) runCatching { File(path).readText() }.getOrNull() else null
 
     override fun resolve(ips: String): String =
         ShellExec.resolve(ips.lines().filter { it.isNotBlank() }, RESOLVE_BUDGET_MS)

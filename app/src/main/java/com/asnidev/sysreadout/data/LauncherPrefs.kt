@@ -68,6 +68,8 @@ data class LauncherPrefs(
     val banner: String = DEFAULT_BANNER,
     val bannerAlign: HAlign = HAlign.CENTER,
     val lockMode: LockMode = LockMode.OFF,
+    /** The lock-screen snapshot leaves out location, network names, notifications, tables and stream. */
+    val snapshotPrivate: Boolean = true,
     val logLayout: LogLayout = LogLayout.CLASSIC,
     /** Feed layout: new rows enter at the top (true) or at the bottom. */
     val feedNewestAtTop: Boolean = true,

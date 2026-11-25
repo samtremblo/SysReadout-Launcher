@@ -386,7 +386,15 @@ private fun LockScreenSection(vm: LauncherViewModel) {
                 vm.updateLockSnapshot()
                 Toast.makeText(context, "lock screen updated", Toast.LENGTH_SHORT).show()
             }
-            Note("the log, drawn with your theme and crt effects, redrawn each time the screen turns off (at most once a minute). android draws its clock and notifications on top.")
+            Toggle("private snapshot", prefs.snapshotPrivate) { v -> vm.setSnapshotPrivate(v) }
+            Note(
+                "the log, drawn with your theme and crt effects, redrawn each time the screen turns off (at most once a minute). android draws its clock and notifications on top. " +
+                    if (prefs.snapshotPrivate) {
+                        "private: only rows like time, battery and cpu. no location, network or bluetooth names, media, notifications, app tables, connections, dns or stream."
+                    } else {
+                        "everything the log shows, readable by anyone holding the locked phone: location, network names, notifications, apps and dns included."
+                    },
+            )
         }
     }
 }

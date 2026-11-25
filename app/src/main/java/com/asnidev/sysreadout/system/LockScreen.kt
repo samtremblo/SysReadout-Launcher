@@ -28,22 +28,55 @@ object LockScreen {
 
     private const val TAG = "LockScreen"
 
+    // Every lock-wallpaper write goes through this, so a slow snapshot can't land after a clear.
+    private val writing = Any()
+
+    /**
+     * Log rows that say where you are, who you're near or what you're doing:
+     * left off a private snapshot, since anyone holding the locked phone sees it.
+     */
+    val PRIVATE_ROWS = setOf("gps", "ssid", "aps", "ip", "tower", "cell", "bt", "media", "ntf", "apps", "sun")
+
+    /** The frame without private rows, tables (apps, connections, DNS, notifications) or stream. */
+    fun privateOnly(frame: LogFrame): LogFrame {
+        val pinned = frame.pinned.filter { it.substringBefore(' ').trim() !in PRIVATE_ROWS }
+        return frame.copy(pinned = pinned, tables = emptyList(), stream = emptyList(), feed = emptyList())
+    }
+
     fun setImage(context: Context, uri: Uri): Boolean = runCatching {
-        context.contentResolver.openInputStream(uri)?.use {
-            WallpaperManager.getInstance(context).setStream(it, null, true, WallpaperManager.FLAG_LOCK)
-        } != null
+        synchronized(writing) {
+            context.contentResolver.openInputStream(uri)?.use {
+                WallpaperManager.getInstance(context).setStream(it, null, true, WallpaperManager.FLAG_LOCK)
+            } != null
+        }
     }.onFailure { Log.w(TAG, "couldn't set the lock-screen image", it) }.getOrDefault(false)
 
     /** Removes SysReadout's lock-screen picture: the lock screen shows the home wallpaper again. */
     fun clear(context: Context): Boolean = runCatching {
-        WallpaperManager.getInstance(context).clear(WallpaperManager.FLAG_LOCK)
+        synchronized(writing) { WallpaperManager.getInstance(context).clear(WallpaperManager.FLAG_LOCK) }
         true
     }.onFailure { Log.w(TAG, "couldn't clear the lock-screen wallpaper", it) }.getOrDefault(false)
 
-    fun setSnapshot(context: Context, frame: LogFrame, theme: Theme, prefs: LauncherPrefs): Boolean = runCatching {
+    /**
+     * Draws and sets the snapshot. [stillWanted] is asked again right before
+     * writing: drawing takes a moment, and the user may have switched it off meanwhile.
+     */
+    fun setSnapshot(
+        context: Context,
+        frame: LogFrame,
+        theme: Theme,
+        prefs: LauncherPrefs,
+        stillWanted: () -> Boolean,
+    ): Boolean = runCatching {
         val bitmap = render(context, frame, theme, prefs)
-        WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
-        bitmap.recycle()
+        try {
+            synchronized(writing) {
+                if (!stillWanted()) return@runCatching false
+                WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+            }
+        } finally {
+            bitmap.recycle()
+        }
         true
     }.onFailure { Log.w(TAG, "couldn't set the lock-screen snapshot", it) }.getOrDefault(false)
 
@@ -51,7 +84,10 @@ object LockScreen {
      * The log as the home screen shows it (banner, rows, tables, the newest
      * stream lines), with the static CRT effects: glow, scanlines, vignette, curvature.
      */
-    fun render(context: Context, frame: LogFrame, theme: Theme, prefs: LauncherPrefs): Bitmap {
+    fun render(context: Context, full: LogFrame, theme: Theme, prefs: LauncherPrefs): Bitmap {
+        val frame = if (prefs.snapshotPrivate) privateOnly(full) else full
+        // A private snapshot has no feed items: draw its rows the classic way.
+        val layout = if (prefs.snapshotPrivate) LogLayout.CLASSIC else prefs.logLayout
         val mode = context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY).mode
         val w = mode.physicalWidth
         val h = mode.physicalHeight
@@ -95,7 +131,7 @@ object LockScreen {
             y += step
             canvas.drawText(theme.log.case.apply(text), margin, y, p)
         }
-        if (prefs.logLayout == LogLayout.FEED) {
+        if (layout == LogLayout.FEED) {
             val room = ((h - margin * 4 - y) / step).toInt().coerceAtLeast(0)
             val rows = frame.feed.take(room)
             (if (prefs.feedNewestAtTop) rows else rows.asReversed()).forEach { line(it.text) }
@@ -107,7 +143,7 @@ object LockScreen {
                 t.rows.forEach { line(it) }
             }
         }
-        if (prefs.logLayout == LogLayout.CLASSIC && prefs.showStream && frame.stream.isNotEmpty()) {
+        if (layout == LogLayout.CLASSIC && prefs.showStream && frame.stream.isNotEmpty()) {
             line("─".repeat(80), dim)
             // Newest lines, as many as fit above the bottom edge.
             val room = ((h - margin * 4 - y) / step).toInt().coerceAtLeast(0)

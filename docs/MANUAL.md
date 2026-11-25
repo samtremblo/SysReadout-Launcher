@@ -226,6 +226,7 @@ Limits:
 - Android allows one VPN at a time, so it can't run together with another VPN app.
 - If Private DNS is set to a specific provider (Settings › Network › Private DNS), Android sends lookups there directly and the monitor sees nothing. *Automatic* or *off* works.
 - Apps with their own encrypted DNS (some browsers) bypass it.
+- It relays DNS over UDP only. An answer too big for one UDP packet comes back marked *truncated*, and the follow-up lookup over TCP is refused at once, so that one name fails quickly instead of hanging. This is rare (very large records only).
 
 ### Notification access
 
@@ -251,7 +252,7 @@ Settings › *lock screen*:
 
 - **leave alone** (default): SysReadout doesn't touch your lock-screen wallpaper.
 - **your image**: pick a picture for the lock screen only.
-- **log snapshot**: each time the screen turns off (at most once a minute), SysReadout draws the log, with your theme and CRT effects, as the lock-screen wallpaper. *Update now* redraws it immediately.
+- **log snapshot**: each time the screen turns off (at most once a minute), SysReadout draws the log, with your theme and CRT effects, as the lock-screen wallpaper. *Update now* redraws it immediately. *Private snapshot* (on by default) leaves out everything that says where you are or what you do: location, sunrise, network and Bluetooth names, IP, cell tower, media, notifications, the app, connection and DNS tables and the stream. Anyone holding the locked phone can read the lock screen, so switch it off only if that's fine with you.
 
 Android's own clock and notifications are drawn on top. Only the lock screen is changed; the home screen is always SysReadout's own drawing.
 

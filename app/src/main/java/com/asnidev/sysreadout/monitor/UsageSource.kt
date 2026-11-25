@@ -80,13 +80,14 @@ class UsageSource(private val context: Context) {
         for (type in listOf(ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE)) {
             val stats = runCatching { netStats.querySummary(type, null, startOfToday(), System.currentTimeMillis()) }
                 .getOrNull() ?: continue
-            val bucket = NetworkStats.Bucket()
-            while (stats.hasNextBucket()) {
-                stats.getNextBucket(bucket)
-                val (rx, tx) = totals[bucket.uid] ?: (0L to 0L)
-                totals[bucket.uid] = (rx + bucket.rxBytes) to (tx + bucket.txBytes)
+            stats.use {
+                val bucket = NetworkStats.Bucket()
+                while (it.hasNextBucket()) {
+                    it.getNextBucket(bucket)
+                    val (rx, tx) = totals[bucket.uid] ?: (0L to 0L)
+                    totals[bucket.uid] = (rx + bucket.rxBytes) to (tx + bucket.txBytes)
+                }
             }
-            stats.close()
         }
         return totals
     }

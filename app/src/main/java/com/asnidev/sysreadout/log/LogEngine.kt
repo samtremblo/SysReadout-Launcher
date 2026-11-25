@@ -76,7 +76,8 @@ class LogEngine(
     private val myUser = userOf(android.os.Process.myUid())
 
     // Every mutation below happens on this one thread, so no locking is needed.
-    private val serial = Dispatchers.Default.limitedParallelism(1)
+    // IO, not Default: the work blocks on PackageManager, usage stats and /proc reads.
+    private val serial = Dispatchers.IO.limitedParallelism(1)
 
     private val _frame = MutableStateFlow(LogFrame())
     val frame: StateFlow<LogFrame> = _frame
@@ -121,7 +122,7 @@ class LogEngine(
     private var usageRowsAt = 0L
     private var slowShellAt = 0L
     private var logcatLast: Double? = null
-    private var dnsSeen = 0L
+    private var dnsSeen = 0L // DnsLog sequence number, not a time
     private var notifSeen = System.currentTimeMillis()
     private val dnsEmitted = HashMap<String, Long>()
     /** Last time each logcat error was shown, to hold back repeats. */
@@ -553,7 +554,7 @@ class LogEngine(
             if (m.evDns) {
                 var emitted = false
                 DnsLog.since(dnsSeen).forEach { l ->
-                    dnsSeen = maxOf(dnsSeen, l.time)
+                    dnsSeen = maxOf(dnsSeen, l.seq)
                     // Reverse lookups (…in-addr.arpa) are tools resolving IPs, not apps reaching servers.
                     if (l.name.endsWith(".arpa") || l.name.isEmpty()) return@forEach
                     val key = "${l.uid}/${l.name}"
@@ -567,7 +568,7 @@ class LogEngine(
                 dnsEmitted.entries.removeAll { System.currentTimeMillis() - it.value > 2 * DNS_REPEAT_MS }
                 if (emitted) publish()
             } else {
-                dnsSeen = System.currentTimeMillis()
+                dnsSeen = DnsLog.latestSeq()
             }
             delay(2_000)
         }

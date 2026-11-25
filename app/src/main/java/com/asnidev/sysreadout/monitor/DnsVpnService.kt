@@ -114,6 +114,11 @@ class DnsVpnService : VpnService() {
                 if (Os.poll(arrayOf(poll), 1000) <= 0) continue
                 val n = input.read(buf)
                 if (n <= 0) continue
+                val rst = Packets.tcpResetFor(buf, n)
+                if (rst != null) {
+                    synchronized(output) { runCatching { output.write(rst) } }
+                    continue
+                }
                 val query = Packets.parseUdp4(buf, n) ?: continue
                 if (query.dstPort != 53) continue // e.g. the DNS-over-TLS probe to :853: let it time out
                 val uid = ownerUid(query) // must be asked while the app's socket still exists
@@ -144,11 +149,13 @@ class DnsVpnService : VpnService() {
 
     private fun answer(query: UdpPacket, uid: Int, output: FileOutputStream) {
         try {
-            val response = relay(query.payload) ?: return
+            val full = relay(query.payload) ?: return
+            // A reply must fit one packet on the tun; bigger answers go back marked truncated.
+            val response = Dns.truncated(full, MTU - 28)
             val reply = Packets.buildUdp4(query.dstIp, query.srcIp, query.dstPort, query.srcPort, response)
             synchronized(output) { runCatching { output.write(reply) } }
             Dns.question(query.payload)?.let { q ->
-                DnsLog.add(DnsLog.Lookup(System.currentTimeMillis(), uid, q.name, Dns.addresses(response)))
+                DnsLog.add(DnsLog.Lookup(System.currentTimeMillis(), uid, q.name, Dns.addresses(full)))
             }
         } catch (e: Exception) { // a thrown exception on a pool thread would crash the launcher
             Log.w(TAG, "couldn't answer a lookup", e)
@@ -163,7 +170,7 @@ class DnsVpnService : VpnService() {
                     protect(socket)
                     socket.soTimeout = 4_000
                     socket.send(DatagramPacket(message, message.size, server, 53))
-                    val buf = ByteArray(MTU)
+                    val buf = ByteArray(65_535) // the largest UDP answer, so none comes back cut off
                     val packet = DatagramPacket(buf, buf.size)
                     socket.receive(packet)
                     return buf.copyOf(packet.length)

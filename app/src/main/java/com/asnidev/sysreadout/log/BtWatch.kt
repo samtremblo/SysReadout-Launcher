@@ -19,11 +19,18 @@ class BtWatch(private val context: Context) {
     private val adapter: BluetoothAdapter? = context.getSystemService(BluetoothManager::class.java)?.adapter
     private val proxies = ConcurrentHashMap<Int, BluetoothProfile>()
     private val levels = ConcurrentHashMap<String, Int>()
-    private var running = false
+    @Volatile private var running = false
 
     private val listener = object : BluetoothProfile.ServiceListener {
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
-            proxies[profile] = proxy
+            // Proxies arrive asynchronously: one that comes after update(false) must not be kept open.
+            if (!running) {
+                runCatching { adapter?.closeProfileProxy(profile, proxy) }
+                return
+            }
+            proxies.put(profile, proxy)?.takeIf { it !== proxy }?.let { old ->
+                runCatching { adapter?.closeProfileProxy(profile, old) }
+            }
         }
 
         override fun onServiceDisconnected(profile: Int) {

@@ -13,7 +13,37 @@ import java.util.concurrent.TimeUnit
 
 /** Bumped whenever [IShellService]'s behaviour changes, so an older running helper gets replaced. */
 object ShellProtocol {
-    const val VERSION = 2
+    const val VERSION = 3 // 3: commands and paths are allow-listed (ShellPolicy)
+}
+
+/**
+ * The only commands and files the Shizuku helper will touch. It runs as the
+ * shell user, so it refuses anything else even though only SysReadout can
+ * reach it: no setting, backup or intent extra can ever become a shell command.
+ * Keep in step with the callers in LogEngine and ShizukuSetup (see ShizukuTest).
+ */
+object ShellPolicy {
+    private const val PKG = "[A-Za-z0-9_.]+"
+    private const val COMPONENT = "$PKG/[A-Za-z0-9_.$]+"
+
+    private val commands = listOf(
+        "top -b -n 1 -q -o PID,UID,%CPU,RES,NAME",
+        "dumpsys (power|thermalservice|batterystats --usage)",
+        "logcat -d -v epoch -t 12 '\\*:[WE]'",
+        "logcat -d -v epoch -T [0-9]+\\.[0-9]{3} '\\*:[WE]' \\| tail -n 60",
+        "appops set --user [0-9]+ $PKG GET_USAGE_STATS allow",
+        "cmd notification allow_listener $COMPONENT [0-9]+",
+        "settings --user [0-9]+ get secure enabled_accessibility_services",
+        "settings --user [0-9]+ put secure enabled_accessibility_services '[A-Za-z0-9_.$/:-]*'" +
+            " && settings --user [0-9]+ put secure accessibility_enabled 1",
+    ).map { Regex(it) }
+
+    /** /proc files only, by plain names: no "..", no symlink tricks through other directories. */
+    private val path = Regex("/proc/[a-z0-9_]+(/[a-z0-9_]+)*")
+
+    fun allowsCommand(command: String): Boolean = commands.any { it.matches(command) }
+
+    fun allowsPath(p: String): Boolean = path.matches(p)
 }
 
 /**

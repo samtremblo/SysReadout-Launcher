@@ -162,7 +162,18 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (!force && now - snapshotAt < 60_000L) return
         snapshotAt = now
         scope.launch(Dispatchers.Default) {
-            LockScreen.setSnapshot(getApplication(), engine.freshFrame(), previewTheme ?: theme.value, prefs.value)
+            LockScreen.setSnapshot(getApplication(), engine.freshFrame(), previewTheme ?: theme.value, prefs.value) {
+                prefs.value.lockMode == LockMode.SNAPSHOT && !safeMode.value
+            }
+        }
+    }
+
+    /** Switches private snapshots on or off and redraws once the setting has been saved. */
+    fun setSnapshotPrivate(on: Boolean) {
+        scope.launch {
+            store.update { it.copy(snapshotPrivate = on) }
+            withTimeoutOrNull(2_000) { prefs.first { it.snapshotPrivate == on } }
+            if (prefs.value.lockMode == LockMode.SNAPSHOT) updateLockSnapshot()
         }
     }
 
