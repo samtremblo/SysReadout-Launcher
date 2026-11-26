@@ -123,10 +123,11 @@ fun Drawer(vm: LauncherViewModel) {
         // Throws if the field isn't attached yet; the keyboard is a convenience, not worth a crash.
         if (prefs.autoKeyboard) runCatching { focus.requestFocus() }
     }
-    // Only an app opens by itself, and only when it's the one match of any kind.
+    // The one match of any kind opens by itself: an app, a shortcut, or a contact
+    // (with the tap action from settings). Not while contacts are still being read.
     LaunchedEffect(q, results.size, links.size, people.size, waitingForContacts) {
-        if (prefs.autoLaunch && q.isNotEmpty() && people.isEmpty() && !waitingForContacts && results.size + links.size == 1) {
-            results.firstOrNull()?.let(open) ?: links.firstOrNull()?.let(openLink)
+        if (prefs.autoLaunch && q.isNotEmpty() && !waitingForContacts && results.size + links.size + people.size == 1) {
+            results.firstOrNull()?.let(open) ?: links.firstOrNull()?.let(openLink) ?: people.firstOrNull()?.let(openContact)
         }
     }
 
