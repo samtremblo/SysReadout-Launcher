@@ -95,9 +95,9 @@ fun Drawer(vm: LauncherViewModel) {
         candidates.filter { it.second >= MIN_FREQUENT }.sortedByDescending { it.second }.take(MAX_FREQUENT).map { it.first }
     }
     // Contacts only show for a search, never as a full list under the apps.
-    val people = remember(q, contacts, prefs.searchContacts) {
+    val people = remember(q, contacts, prefs.searchContacts, prefs.hiddenContacts) {
         if (q.isEmpty() || !prefs.searchContacts) emptyList()
-        else Search.filterNormalized(contacts, q) { it.match }.take(MAX_CONTACTS)
+        else Search.filterNormalized(contacts.filter { it.lookupKey !in prefs.hiddenContacts }, q) { it.match }.take(MAX_CONTACTS)
     }
     // Still reading contacts: don't open an app that a contact might also match.
     val waitingForContacts = prefs.searchContacts && !contactsLoaded && vm.contacts.hasPermission()
@@ -290,6 +290,11 @@ private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Sty
             if (contact.number != null) {
                 MenuItem("call") { run(ContactAction.CALL) }
                 MenuItem("text") { run(ContactAction.TEXT) }
+            }
+            MenuItem("hide from search") {
+                menu = false
+                vm.hideContact(contact)
+                Toast.makeText(context, "hidden · settings › drawer to bring it back", Toast.LENGTH_SHORT).show()
             }
         }
     }

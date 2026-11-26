@@ -375,6 +375,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         return ok
     }
 
+    fun hideContact(contact: ContactEntry) = update { it.copy(hiddenContacts = it.hiddenContacts + contact.lookupKey) }
+
+    fun unhideContact(lookupKey: String) = update { it.copy(hiddenContacts = it.hiddenContacts - lookupKey) }
+
     fun openContact(contact: ContactEntry, action: ContactAction = prefs.value.contactAction): Boolean {
         val ok = when {
             contact.number == null -> contacts.open(contact)

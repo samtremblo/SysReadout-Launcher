@@ -344,8 +344,16 @@ private fun ContactSearchToggle(vm: LauncherViewModel) {
                 }
             },
         ) { v -> vm.update { it.copy(contactAction = v) } }
+        if (prefs.hiddenContacts.isNotEmpty()) {
+            val contacts by vm.contacts.contacts.collectAsState()
+            val names = remember(contacts) { contacts.associate { it.lookupKey to it.name } }
+            Text("  hidden contacts", style = Type.row, color = Palette.dim, modifier = Modifier.padding(top = 6.dp))
+            prefs.hiddenContacts.sortedBy { names[it]?.lowercase() ?: "\uFFFF" }.forEach { key ->
+                Link("  " + (names[key] ?: "(not on this phone)"), "[unhide]") { vm.unhideContact(key) }
+            }
+        }
         if (permitted) {
-            Note("contacts show under the apps while you type; long-press one for the other actions. calling opens the dialer with the number filled in. a contact without a number always opens. contacts stay on this phone and are never saved by sysreadout.")
+            Note("contacts show under the apps while you type; long-press one for the other actions or to hide it. calling opens the dialer with the number filled in. a contact without a number always opens. contacts stay on this phone and are never saved by sysreadout.")
         } else {
             Note("the contacts permission was taken away, so no contacts show.")
             Link("allow again") { ask.launchOr(context, "this phone has no permission screen", Manifest.permission.READ_CONTACTS) }

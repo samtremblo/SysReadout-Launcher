@@ -56,6 +56,7 @@ class SettingsStore(private val context: Context) {
         val autoLaunch = booleanPreferencesKey("auto_launch")
         val searchContacts = booleanPreferencesKey("search_contacts")
         val contactAction = stringPreferencesKey("contact_action")
+        val hiddenContacts = stringSetPreferencesKey(HIDDEN_CONTACTS)
         val webSearch = booleanPreferencesKey("web_search")
         val appShortcuts = booleanPreferencesKey("app_shortcuts")
         val sortByHistory = booleanPreferencesKey("sort_by_history")
@@ -111,17 +112,22 @@ class SettingsStore(private val context: Context) {
 
     /** Every saved setting by key, for a backup. */
     suspend fun snapshot(): Map<String, Any> =
-        context.dataStore.data.first().asMap().mapKeys { it.key.name }
+        context.dataStore.data.first().asMap().mapKeys { it.key.name } - NOT_BACKED_UP
 
     /**
      * Replaces every setting with [values] from a backup: anything the backup
      * doesn't have goes back to its default. Keys this version doesn't know
      * (from a newer backup) are written as they are and simply not read.
+     * Settings that never go into backups are kept as they are on this phone.
      */
     suspend fun restore(values: Map<String, Any>) {
         context.dataStore.edit { p ->
+            val kept = p.asMap().filterKeys { it.name in NOT_BACKED_UP }
             p.clear()
+            @Suppress("UNCHECKED_CAST")
+            kept.forEach { (k, v) -> p[k as Preferences.Key<Any>] = v }
             values.forEach { (name, v) ->
+                if (name in NOT_BACKED_UP) return@forEach // a hand-made backup can't set them either
                 @Suppress("UNCHECKED_CAST")
                 when (v) {
                     is Boolean -> p[booleanPreferencesKey(name)] = v
@@ -160,6 +166,7 @@ class SettingsStore(private val context: Context) {
             autoLaunch = p[K.autoLaunch] ?: d.autoLaunch,
             searchContacts = p[K.searchContacts] ?: d.searchContacts,
             contactAction = enumOr(p[K.contactAction], d.contactAction),
+            hiddenContacts = p[K.hiddenContacts] ?: d.hiddenContacts,
             webSearch = p[K.webSearch] ?: d.webSearch,
             appShortcuts = p[K.appShortcuts] ?: d.appShortcuts,
             sortByHistory = p[K.sortByHistory] ?: d.sortByHistory,
@@ -194,6 +201,7 @@ class SettingsStore(private val context: Context) {
         p[K.autoLaunch] = v.autoLaunch
         p[K.searchContacts] = v.searchContacts
         p[K.contactAction] = v.contactAction.name
+        if (v.hiddenContacts.isEmpty()) p.remove(K.hiddenContacts) else p[K.hiddenContacts] = v.hiddenContacts
         p[K.webSearch] = v.webSearch
         p[K.appShortcuts] = v.appShortcuts
         p[K.sortByHistory] = v.sortByHistory
@@ -212,4 +220,11 @@ class SettingsStore(private val context: Context) {
 
     private inline fun <reified E : Enum<E>> enumOr(name: String?, default: E): E =
         name?.let { runCatching { enumValueOf<E>(it) }.getOrNull() } ?: default
+
+    companion object {
+        const val HIDDEN_CONTACTS = "hidden_contacts"
+
+        /** Stay on this phone: contact ids are personal and mean nothing on another phone. */
+        val NOT_BACKED_UP = setOf(HIDDEN_CONTACTS)
+    }
 }

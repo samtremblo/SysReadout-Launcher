@@ -54,6 +54,11 @@ data class LauncherPrefs(
     /** Drawer search also lists contacts (needs the contacts permission; off until switched on). */
     val searchContacts: Boolean = false,
     val contactAction: ContactAction = ContactAction.OPEN,
+    /**
+     * Contacts left out of drawer search, by Android's lookup key: an opaque id,
+     * no name or number. Not in backups (the keys mean nothing on another phone).
+     */
+    val hiddenContacts: Set<String> = emptySet(),
     /** A search with no app or contact match offers to search Google for it (off until switched on). */
     val webSearch: Boolean = false,
     /** Drawer search also lists apps' own shortcuts ("new incognito tab"), not only pinned ones. */
