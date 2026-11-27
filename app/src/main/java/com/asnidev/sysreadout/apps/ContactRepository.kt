@@ -12,7 +12,7 @@ import android.os.Looper
 import android.provider.ContactsContract
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.asnidev.sysreadout.ui.Search
+import com.asnidev.sysreadout.ui.Searchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,8 +26,8 @@ import java.text.Collator
 
 /** One contact as the drawer shows it. [number] is its primary (or first) phone number, if any. */
 data class ContactEntry(val id: Long, val lookupKey: String, val name: String, val number: String?) {
-    /** [name] normalized once for matching, so typing doesn't redo it for every contact. */
-    val match: String = Search.normalize(name)
+    /** [name] (and [number]) prepared once for matching, so typing doesn't redo it for every contact. */
+    val search: Searchable = Searchable(name, number)
 }
 
 /**

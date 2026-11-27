@@ -41,7 +41,15 @@ The home screen has three layers: the **log** in the background, an optional **c
 
 Swipe up. The keyboard opens straight into search (you can turn that off).
 
-- Search ignores accents and matches, in this order: names that **start** with what you typed, names whose **initials** match (`gm` finds *Google Maps*), then names that **contain** it.
+- Search ignores accents, case and spacing (`whats app` finds *WhatsApp*). Matches are listed best first:
+  1. the exact name, then names that **start** with what you typed;
+  2. a **word** that starts with it (`maps` finds *Google Maps*);
+  3. **initials**, including joined-up words (`gm` finds *Google Maps*, `wa` *WhatsApp*, `yt` *YouTube*);
+  4. **several words**, each starting a word in order (`goo st` finds *Google Play Store*);
+  5. a contact's **phone number** containing the digits you typed (3 or more);
+  6. names that **contain** it anywhere.
+
+  Within each step, what you open most comes first (*sort by history*), then shorter names. If nothing matches that way, SysReadout guesses: letters in order (`ytb` → *YouTube*) or a small typo (`instagrem` → *Instagram*). Guesses never open by themselves.
 - **Sort by history** (settings › drawer, on by default): matches stay grouped by how well they match (start, initials, anywhere), and within each group the apps and shortcuts you open most, and lately, come first, so the Go key usually opens the one you want. Each launch counts 1 and fades by half every week. Only apps and shortcuts are recorded, never contacts, on the phone only (and in your backups). *Clear history* forgets it; switching the option off also stops recording.
 - Before you type, the drawer lists your most used apps and shortcuts under `# frequent` (with *sort by history* on), then everything under `# all`.
 - As you type, the rest of the top result's name appears dimmed after your text (`ins`*tagram*), or `→ name` when it matched by initials or partway through the name. That's what the Go key opens.

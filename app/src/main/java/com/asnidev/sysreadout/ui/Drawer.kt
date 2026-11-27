@@ -73,19 +73,21 @@ fun Drawer(vm: LauncherViewModel) {
     val now = remember(q) { System.currentTimeMillis() }
     val weight: ((String) -> Double)? =
         if (prefs.sortByHistory) { key -> history[key]?.weightAt(now) ?: 0.0 } else null
-    val results = remember(q, apps, prefs.hidden, prefs.renames, history, prefs.sortByHistory) {
-        Search.filter(
+    // Names prepared for matching once per list change, not on every keystroke.
+    val appNames = remember(apps, prefs.renames) { apps.associate { it.key to Searchable(vm.label(it)) } }
+    val linkNames = remember(shortcuts) { shortcuts.associate { it.key to Searchable(it.label) } }
+    val foundApps = remember(q, apps, appNames, prefs.hidden, history, prefs.sortByHistory) {
+        Search.find(
             apps.filter { it.key !in prefs.hidden }, q,
             weight?.let { w -> { app: AppEntry -> w(LaunchHistory.appKey(app.key)) } },
-            vm::label,
-        )
+        ) { appNames[it.key] ?: Searchable(vm.label(it)) }
     }
     // Pinned shortcuts are listed like apps; apps' own shortcuts only when searching.
-    val links = remember(q, shortcuts, history, prefs.sortByHistory) {
-        Search.filter(
+    val foundLinks = remember(q, shortcuts, linkNames, history, prefs.sortByHistory) {
+        Search.find(
             if (q.isEmpty()) shortcuts.filter { it.pinned } else shortcuts, q,
             weight?.let { w -> { s: ShortcutEntry -> w(LaunchHistory.shortcutKey(s.key)) } },
-        ) { it.label }
+        ) { linkNames[it.key] ?: Searchable(it.label) }
     }
     // Before typing: the most used apps and shortcuts on top, then the full A–Z list.
     val frequent: List<Any> = remember(q, apps, shortcuts, prefs.hidden, history, prefs.sortByHistory) {
@@ -95,10 +97,19 @@ fun Drawer(vm: LauncherViewModel) {
         candidates.filter { it.second >= MIN_FREQUENT }.sortedByDescending { it.second }.take(MAX_FREQUENT).map { it.first }
     }
     // Contacts only show for a search, never as a full list under the apps.
-    val people = remember(q, contacts, prefs.searchContacts, prefs.hiddenContacts) {
-        if (q.isEmpty() || !prefs.searchContacts) emptyList()
-        else Search.filterNormalized(contacts.filter { it.lookupKey !in prefs.hiddenContacts }, q) { it.match }.take(MAX_CONTACTS)
+    val foundPeople = remember(q, contacts, prefs.searchContacts, prefs.hiddenContacts) {
+        if (q.isEmpty() || !prefs.searchContacts) Search.Found(emptyList(), fuzzy = false)
+        else Search.find(contacts.filter { it.lookupKey !in prefs.hiddenContacts }, q) { it.search }
     }
+    // A proper match anywhere (app, shortcut or contact) hides the fuzzy guesses everywhere.
+    val found = listOf(foundApps, foundLinks, foundPeople)
+    val anyStrong = found.any { it.items.isNotEmpty() && !it.fuzzy }
+    fun <T> shown(f: Search.Found<T>): List<T> = if (f.fuzzy && anyStrong) emptyList() else f.items
+    val results = shown(foundApps)
+    val links = shown(foundLinks)
+    val people = shown(foundPeople).take(MAX_CONTACTS)
+    // Only proper matches open by themselves; a guess waits for a tap or Go.
+    val onlyGuesses = !anyStrong
     // Still reading contacts: don't open an app that a contact might also match.
     val waitingForContacts = prefs.searchContacts && !contactsLoaded && vm.contacts.hasPermission()
 
@@ -106,7 +117,8 @@ fun Drawer(vm: LauncherViewModel) {
         if (!vm.launch(app.key)) Toast.makeText(context, "can't open ${app.label}", Toast.LENGTH_SHORT).show()
     }
     val trimmed = query.trim()
-    val offerWeb = prefs.webSearch && q.isNotEmpty() && results.isEmpty() && links.isEmpty() && people.isEmpty()
+    // Also next to fuzzy guesses: the user may have meant something not on the phone.
+    val offerWeb = prefs.webSearch && q.isNotEmpty() && onlyGuesses
     val openLink: (ShortcutEntry) -> Unit = { s ->
         if (!vm.launchShortcut(s)) Toast.makeText(context, "can't open ${s.label}", Toast.LENGTH_SHORT).show()
     }
@@ -125,8 +137,10 @@ fun Drawer(vm: LauncherViewModel) {
     }
     // The one match of any kind opens by itself: an app, a shortcut, or a contact
     // (with the tap action from settings). Not while contacts are still being read.
-    LaunchedEffect(q, results.size, links.size, people.size, waitingForContacts) {
-        if (prefs.autoLaunch && q.isNotEmpty() && !waitingForContacts && results.size + links.size + people.size == 1) {
+    LaunchedEffect(q, results.size, links.size, people.size, waitingForContacts, onlyGuesses) {
+        if (prefs.autoLaunch && q.isNotEmpty() && !waitingForContacts && !onlyGuesses &&
+            results.size + links.size + people.size == 1
+        ) {
             results.firstOrNull()?.let(open) ?: links.firstOrNull()?.let(openLink) ?: people.firstOrNull()?.let(openContact)
         }
     }
