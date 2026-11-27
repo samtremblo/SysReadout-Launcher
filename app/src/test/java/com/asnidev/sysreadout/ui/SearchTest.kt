@@ -108,4 +108,15 @@ class SearchTest {
         assertNull(Search.completion("Maps", "mapss"))
         assertNull(Search.completion("Maps", ""))
     }
+
+    @Test
+    fun nicknamesMatchLikeTheName() {
+        val bob = Searchable("Robert Smith", null, listOf("Bobby"))
+        assertEquals(Tier.PREFIX, Search.match(bob, "bob"))
+        assertEquals("Bobby", Search.matchedAlias(bob, "bob"))
+        // The name matches as well or better: no need to show the nickname.
+        assertEquals(Tier.PREFIX, Search.match(bob, "rob"))
+        assertNull(Search.matchedAlias(bob, "rob"))
+        assertNull(Search.match(bob, "zz"))
+    }
 }

@@ -6,9 +6,11 @@ import java.text.Normalizer
  * A name prepared for matching once (per app or contact, not per keystroke):
  * accent-free lower case, split into words at spaces, punctuation and
  * camelCase ("WhatsApp" → whats, app), with its initials and a spaceless form.
- * [digits] is a phone number reduced to its digits, for contacts.
+ * [digits] is a phone number reduced to its digits, and [aliases] other names
+ * (a contact's nicknames), matched like the label itself.
  */
-class Searchable(val label: String, number: String? = null) {
+class Searchable(val label: String, number: String? = null, aliases: List<String> = emptyList()) {
+    val aliases: List<Searchable> = aliases.filter { it.isNotBlank() }.map { Searchable(it) }
     val full: String = Search.normalize(label)
     val words: List<String> = Search.words(label)
     val initials: String = words.joinToString("") { it.take(1) }
@@ -59,6 +61,22 @@ object Search {
      * Without [fuzzy], the costlier fuzzy tiers aren't tried.
      */
     fun match(s: Searchable, q: String, fuzzy: Boolean = true): Tier? {
+        // The best of the name and its aliases (nicknames).
+        val own = matchOne(s, q, fuzzy)
+        if (s.aliases.isEmpty() || own == Tier.EXACT) return own
+        return (listOf(own) + s.aliases.map { matchOne(it, q, fuzzy) }).filterNotNull().minOrNull()
+    }
+
+    /** The alias (nickname) that matches [q] better than the name itself, if any: worth showing. */
+    fun matchedAlias(s: Searchable, q: String): String? {
+        val own = matchOne(s, q, fuzzy = true)
+        return s.aliases
+            .mapNotNull { a -> matchOne(a, q, fuzzy = true)?.let { a to it } }
+            .filter { own == null || it.second < own }
+            .minByOrNull { it.second }?.first?.label
+    }
+
+    private fun matchOne(s: Searchable, q: String, fuzzy: Boolean): Tier? {
         val query = q.trim().replace(spaces, " ")
         if (query.isEmpty()) return null
         val tokens = query.split(' ')

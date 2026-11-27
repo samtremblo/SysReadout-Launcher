@@ -213,7 +213,7 @@ fun Drawer(vm: LauncherViewModel) {
                 item(key = "contacts-header") {
                     SectionLabel("# contacts", styled, top = results.isNotEmpty() || links.isNotEmpty())
                 }
-                items(people, key = { "contact:${it.id}" }) { c -> ContactRow(vm, c, styled, openContact) }
+                items(people, key = { "contact:${it.id}" }) { c -> ContactRow(vm, c, Search.matchedAlias(c.search, q), styled, openContact) }
             }
             if (offerWeb) {
                 item(key = "web-search") {
@@ -281,7 +281,7 @@ private const val MIN_FREQUENT = 0.5
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Styled, open: (ContactEntry) -> Unit) {
+private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, nickname: String?, styled: Styled, open: (ContactEntry) -> Unit) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     val run = { action: ContactAction ->
@@ -291,7 +291,8 @@ private fun ContactRow(vm: LauncherViewModel, contact: ContactEntry, styled: Sty
 
     Box {
         Text(
-            styled.text(StyleElement.DRAWER, contact.name),
+            // Found by nickname: show it, or the row wouldn't say why it matched.
+            styled.text(StyleElement.DRAWER, contact.name + (nickname?.let { " · $it" } ?: "")),
             style = styled.drawer,
             maxLines = 1,
             modifier = Modifier

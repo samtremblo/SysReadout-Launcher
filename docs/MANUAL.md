@@ -47,7 +47,10 @@ Swipe up. The keyboard opens straight into search (you can turn that off).
   3. **initials**, including joined-up words (`gm` finds *Google Maps*, `wa` *WhatsApp*, `yt` *YouTube*);
   4. **several words**, each starting a word in order (`goo st` finds *Google Play Store*);
   5. a contact's **phone number** containing the digits you typed (3 or more);
+
   6. names that **contain** it anywhere.
+
+  Contacts' **nicknames** count like their names: `bob` finds *Robert Smith*, shown as `Robert Smith · Bobby` so you can see why.
 
   Within each step, what you open most comes first (*sort by history*), then shorter names. If nothing matches that way, SysReadout guesses: letters in order (`ytb` → *YouTube*) or a small typo (`instagrem` → *Instagram*). Guesses never open by themselves.
 - **Sort by history** (settings › drawer, on by default): matches stay grouped by how well they match (start, initials, anywhere), and within each group the apps and shortcuts you open most, and lately, come first, so the Go key usually opens the one you want. Each launch counts 1 and fades by half every week. Only apps and shortcuts are recorded, never contacts, on the phone only (and in your backups). *Clear history* forgets it; switching the option off also stops recording.

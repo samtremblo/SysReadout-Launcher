@@ -25,9 +25,15 @@ import kotlinx.coroutines.withContext
 import java.text.Collator
 
 /** One contact as the drawer shows it. [number] is its primary (or first) phone number, if any. */
-data class ContactEntry(val id: Long, val lookupKey: String, val name: String, val number: String?) {
-    /** [name] (and [number]) prepared once for matching, so typing doesn't redo it for every contact. */
-    val search: Searchable = Searchable(name, number)
+data class ContactEntry(
+    val id: Long,
+    val lookupKey: String,
+    val name: String,
+    val number: String?,
+    val nicknames: List<String> = emptyList(),
+) {
+    /** [name], [number] and [nicknames] prepared once for matching, so typing doesn't redo it for every contact. */
+    val search: Searchable = Searchable(name, number, nicknames)
 }
 
 /**
@@ -116,6 +122,22 @@ class ContactRepository(private val context: Context, private val scope: Corouti
             }
         }
 
+        // Nicknames ("Bobby", "Mom") live in the data table, one row each.
+        val nicknames = HashMap<Long, MutableList<String>>()
+        resolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(ContactsContract.Data.CONTACT_ID, ContactsContract.CommonDataKinds.Nickname.NAME),
+            "${ContactsContract.Data.MIMETYPE} = ?",
+            arrayOf(ContactsContract.CommonDataKinds.Nickname.CONTENT_ITEM_TYPE),
+            null,
+        )?.use { c ->
+            while (c.moveToNext()) {
+                val nick = c.getString(1)?.trim()?.takeIf { it.isNotEmpty() } ?: continue
+                val list = nicknames.getOrPut(c.getLong(0)) { mutableListOf() }
+                if (list.none { it.equals(nick, ignoreCase = true) }) list += nick
+            }
+        }
+
         val out = ArrayList<ContactEntry>()
         resolver.query(
             ContactsContract.Contacts.CONTENT_URI,
@@ -130,7 +152,7 @@ class ContactRepository(private val context: Context, private val scope: Corouti
                 val id = c.getLong(0)
                 val key = c.getString(1) ?: continue
                 val name = c.getString(2)?.takeIf { it.isNotBlank() } ?: continue
-                out += ContactEntry(id, key, name, numbers[id])
+                out += ContactEntry(id, key, name, numbers[id], nicknames[id].orEmpty().filterNot { it.equals(name, ignoreCase = true) })
             }
         }
         val collator = Collator.getInstance()
