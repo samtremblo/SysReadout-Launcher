@@ -91,7 +91,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
     BackHandler(enabled = stack.size > 1, onBack = back)
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f)).systemBarsPadding()) {
+    // See-through over the live log, except in OLED black, where the log would light pixels behind it.
+    val oled = vm.prefs.collectAsState().value.oled
+    val panel = MaterialTheme.colorScheme.background.copy(alpha = if (oled) 1f else 0.94f)
+    Column(Modifier.fillMaxSize().background(panel).systemBarsPadding()) {
         // Each page gets its own scroll position.
         key(page) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp)) {
