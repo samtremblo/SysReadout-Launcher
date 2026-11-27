@@ -47,7 +47,6 @@ Swipe up. The keyboard opens straight into search (you can turn that off).
   3. **initials**, including joined-up words (`gm` finds *Google Maps*, `wa` *WhatsApp*, `yt` *YouTube*);
   4. **several words**, each starting a word in order (`goo st` finds *Google Play Store*);
   5. a contact's **phone number** containing the digits you typed (3 or more);
-
   6. names that **contain** it anywhere.
 
   Contacts' **nicknames** count like their names: `bob` finds *Robert Smith*, shown as `Robert Smith · Bobby` so you can see why.
