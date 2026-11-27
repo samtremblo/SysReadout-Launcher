@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asnidev.sysreadout.LauncherViewModel
+import com.asnidev.sysreadout.data.LockMode
 import com.asnidev.sysreadout.data.Preset
 import com.asnidev.sysreadout.data.Presets
 import com.asnidev.sysreadout.data.StyleElement
@@ -41,6 +42,7 @@ private enum class ThemeColor(val label: String) { BACKGROUND("background"), ACC
 fun AppearancePage(vm: LauncherViewModel, open: (Page) -> Unit) {
     val context = LocalContext.current
     val theme by vm.theme.collectAsState()
+    val prefs by vm.prefs.collectAsState()
     val userPresets by vm.userPresets.collectAsState()
     var editing by remember { mutableStateOf<ThemeColor?>(null) }
     var saving by remember { mutableStateOf(false) }
@@ -56,10 +58,16 @@ fun AppearancePage(vm: LauncherViewModel, open: (Page) -> Unit) {
     Link("save current as preset…", "+") { saving = true }
 
     Section("screen")
+    Toggle("oled black", prefs.oled) { v ->
+        vm.update { it.copy(oled = v) }
+        if (prefs.lockMode == LockMode.SNAPSHOT) vm.updateLockSnapshot()
+    }
+    Note("pure black background with any theme or preset: an oled screen leaves those pixels off, saving battery.")
     Link("crt effects", if (theme.crt.isOff) "off ›" else "on ›") { open(Page.Crt) }
 
     Section("colours")
     ColorRow("background", theme.background) { editing = ThemeColor.BACKGROUND }
+    if (prefs.oled) Note("oled black is on: the background shows as black until it's off.")
     ColorRow("accent", theme.accent) { editing = ThemeColor.ACCENT }
     ColorRow("backing", theme.backing) { editing = ThemeColor.BACKING }
     Note("backing tints the frosted / highlight box behind home-screen text.")

@@ -77,6 +77,8 @@ data class LauncherPrefs(
     val lockMode: LockMode = LockMode.OFF,
     /** The lock-screen snapshot leaves out location, network names, notifications, tables and stream. */
     val snapshotPrivate: Boolean = true,
+    /** Pure black background over any theme, so an OLED screen leaves those pixels off. */
+    val oled: Boolean = false,
     val logLayout: LogLayout = LogLayout.CLASSIC,
     /** Feed layout: new rows enter at the top (true) or at the bottom. */
     val feedNewestAtTop: Boolean = true,

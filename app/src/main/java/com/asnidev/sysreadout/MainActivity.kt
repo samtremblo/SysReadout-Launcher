@@ -146,7 +146,7 @@ private fun LauncherRoot(vm: LauncherViewModel, activity: ComponentActivity) {
     val saved by vm.theme.collectAsState()
     val safe by vm.safeMode.collectAsState()
     // Safe mode draws with the default look: an imported font or CRT shader may be what crashed.
-    val theme = if (safe) Presets.default.theme else vm.previewTheme ?: saved
+    val theme = (if (safe) Presets.default.theme else vm.previewTheme ?: saved).oled(prefs.oled)
     val styled = rememberStyled(theme, vm.fontsVersion)
     val haze = remember { HazeState() }
 

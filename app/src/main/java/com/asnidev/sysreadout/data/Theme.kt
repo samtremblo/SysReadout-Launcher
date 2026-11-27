@@ -97,6 +97,9 @@ data class Theme(
         StyleElement.BANNER -> copy(banner = s)
     }
 
+    /** This theme on a pure black background (OLED mode); text, accent and backing keep their colours. */
+    fun oled(on: Boolean = true): Theme = if (on) copy(background = OLED_BLACK) else this
+
     /** Swaps every use of a font, e.g. after the user deletes an imported one. */
     fun replacingFont(old: String, new: String): Theme =
         StyleElement.entries.fold(this) { t, e ->
@@ -113,6 +116,8 @@ data class Theme(
         .apply { StyleElement.entries.forEach { put(it.name.lowercase(), spec(it).toJson()) } }
 
     companion object {
+        const val OLED_BLACK = 0xFF000000
+
         /** Missing or malformed fields fall back to [fallback], so old saves keep loading. */
         fun fromJson(o: JSONObject, fallback: Theme = Presets.default.theme): Theme {
             var t = fallback.copy(

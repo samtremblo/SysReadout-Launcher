@@ -40,6 +40,7 @@ From a full CRT terminal to a plain list of apps: every look, the log and each e
 **Look**
 - 12 presets (including green-phosphor and amber DOS terminals, synthwave neon and an all-red night mode) plus your own.
 - 11 bundled fonts and your own .ttf/.otf, with size, weight, spacing, case and colour per element.
+- OLED black: pure black background over any theme.
 - CRT effects: glow, scanlines, curvature, vignette, colour fringe, flicker, grain.
 - Lock screen: your own image, or a snapshot of the log redrawn whenever the screen turns off.
 

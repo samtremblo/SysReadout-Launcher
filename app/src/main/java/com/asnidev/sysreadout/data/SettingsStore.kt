@@ -73,6 +73,7 @@ class SettingsStore(private val context: Context) {
         val bannerAlign = stringPreferencesKey("banner_align")
         val lockMode = stringPreferencesKey("lock_mode")
         val snapshotPrivate = booleanPreferencesKey("snapshot_private")
+        val oled = booleanPreferencesKey("oled")
         val logLayout = stringPreferencesKey("log_layout")
         val feedTop = booleanPreferencesKey("feed_newest_at_top")
     }
@@ -179,6 +180,7 @@ class SettingsStore(private val context: Context) {
             bannerAlign = enumOr(p[K.bannerAlign], d.bannerAlign),
             lockMode = enumOr(p[K.lockMode], d.lockMode),
             snapshotPrivate = p[K.snapshotPrivate] ?: d.snapshotPrivate,
+            oled = p[K.oled] ?: d.oled,
             logLayout = enumOr(p[K.logLayout], d.logLayout),
             feedNewestAtTop = p[K.feedTop] ?: d.feedNewestAtTop,
         )
@@ -214,6 +216,7 @@ class SettingsStore(private val context: Context) {
         p[K.bannerAlign] = v.bannerAlign.name
         p[K.lockMode] = v.lockMode.name
         p[K.snapshotPrivate] = v.snapshotPrivate
+        p[K.oled] = v.oled
         p[K.logLayout] = v.logLayout.name
         p[K.feedTop] = v.feedNewestAtTop
     }

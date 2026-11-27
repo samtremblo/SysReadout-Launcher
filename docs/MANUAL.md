@@ -255,6 +255,10 @@ Settings › appearance.
 - **Fonts**: 11 bundled (system mono/sans, JetBrains Mono, IBM Plex Mono, Space Mono, Share Tech Mono, VT323, Px437 IBM VGA, Major Mono Display, Press Start 2P, Silkscreen) plus *import .ttf / .otf* for your own. Long-press an imported font to delete it.
 - **Menu entries › prefix**: text in front of every entry, such as `> `, `$ `, `C:\> ` or a number (`[1]`).
 
+### OLED black
+
+Appearance › *oled black* draws the background pure black whatever theme or preset you pick, so an OLED screen leaves those pixels switched off. Text, accent and backing colours stay as the theme sets them, the lock-screen snapshot follows, and switching it off brings the theme's own background back. For the most saving, leave glow and grain off too: they light pixels around the text.
+
 ### CRT effects
 
 Appearance › *crt effects*: glow, scanlines, vignette, curvature and colour fringe (the last two need Android 13+), plus animated flicker and grain. *Menu, clock and date too* applies them to the whole home screen instead of just the log. Flicker and grain redraw the screen about 20 times a second while it's visible, so they cost battery.

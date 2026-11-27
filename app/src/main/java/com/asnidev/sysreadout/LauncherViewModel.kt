@@ -172,13 +172,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Redraws the lock-screen snapshot; at most once a minute unless [force]d. */
+    /** The theme as drawn: the one being previewed or saved, in OLED black when that's on. */
+    private fun shownTheme(): Theme = (previewTheme ?: theme.value).oled(prefs.value.oled)
+
     fun updateLockSnapshot(force: Boolean = true) {
         if (safeMode.value) return
         val now = System.currentTimeMillis()
         if (!force && now - snapshotAt < 60_000L) return
         snapshotAt = now
         scope.launch(Dispatchers.Default) {
-            LockScreen.setSnapshot(getApplication(), engine.freshFrame(), previewTheme ?: theme.value, prefs.value) {
+            LockScreen.setSnapshot(getApplication(), engine.freshFrame(), shownTheme(), prefs.value) {
                 prefs.value.lockMode == LockMode.SNAPSHOT && !safeMode.value
             }
         }
@@ -197,7 +200,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun snapshotToFile() {
         scope.launch(Dispatchers.Default) {
             val app = getApplication<Application>()
-            val bitmap = LockScreen.render(app, engine.freshFrame(), previewTheme ?: theme.value, prefs.value)
+            val bitmap = LockScreen.render(app, engine.freshFrame(), shownTheme(), prefs.value)
             File(app.cacheDir, "snapshot.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
