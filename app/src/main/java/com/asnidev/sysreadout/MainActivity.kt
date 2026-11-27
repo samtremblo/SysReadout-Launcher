@@ -1,6 +1,8 @@
 package com.asnidev.sysreadout
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -40,6 +42,8 @@ import com.asnidev.sysreadout.ui.settings.Page
 import com.asnidev.sysreadout.ui.settings.SettingsScreen
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 class MainActivity : ComponentActivity() {
@@ -53,7 +57,12 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         preview(intent)
-        setContent { SysReadoutTheme { LauncherRoot(vm, this) } }
+        setContent {
+            val oled by remember { vm.prefs.map { it.oled }.distinctUntilChanged() }.collectAsState(false)
+            // The window shows behind everything while starting and during transitions.
+            LaunchedEffect(oled) { window.setBackgroundDrawable(ColorDrawable(if (oled) Color.BLACK else getColor(R.color.bg))) }
+            SysReadoutTheme(oled) { LauncherRoot(vm, this) }
+        }
     }
 
     /**

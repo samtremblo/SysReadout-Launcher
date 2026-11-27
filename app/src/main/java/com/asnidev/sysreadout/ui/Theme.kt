@@ -28,12 +28,14 @@ object Type {
 }
 
 @Composable
-fun SysReadoutTheme(content: @Composable () -> Unit) {
+fun SysReadoutTheme(oled: Boolean = false, content: @Composable () -> Unit) {
+    // OLED black: settings, dialogs and menus on #000 too, not just the home screen.
+    val black = Color(0xFF000000)
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Palette.log,
-            background = Palette.bg,
-            surface = Color(0xFF0C120F),
+            background = if (oled) black else Palette.bg,
+            surface = if (oled) black else Color(0xFF0C120F),
             onSurface = Palette.fg,
         ),
         content = content,

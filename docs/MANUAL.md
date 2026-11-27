@@ -257,7 +257,7 @@ Settings › appearance.
 
 ### OLED black
 
-Appearance › *oled black* draws the background pure black whatever theme or preset you pick, so an OLED screen leaves those pixels switched off. Text, accent and backing colours stay as the theme sets them, the lock-screen snapshot follows, and switching it off brings the theme's own background back. For the most saving, leave glow and grain off too: they light pixels around the text.
+Appearance › *oled black* draws the background pure black whatever theme or preset you pick, so an OLED screen leaves those pixels switched off; settings and dialogs turn black too. Text, accent and backing colours stay as the theme sets them, the lock-screen snapshot follows, and switching it off brings the theme's own background back. For the most saving, leave glow and grain off too: they light pixels around the text.
 
 ### CRT effects
 

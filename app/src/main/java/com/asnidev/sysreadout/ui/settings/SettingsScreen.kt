@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import com.asnidev.sysreadout.system.Torch
 import com.asnidev.sysreadout.data.GestureKind
@@ -90,7 +91,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
     BackHandler(enabled = stack.size > 1, onBack = back)
 
-    Column(Modifier.fillMaxSize().background(Palette.bg.copy(alpha = 0.94f)).systemBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f)).systemBarsPadding()) {
         // Each page gets its own scroll position.
         key(page) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp)) {
